@@ -1,0 +1,24 @@
+# Your QRA coordinates, Eiffel Tower follow:
+qra.latitude = 48.858256
+qra.longitude = 2.294544
+qra.altitude  = 334
+
+# Output
+time.offset = 3600
+earth.ellipsoid = 49
+#header.repeat = 22
+
+# GPS output
+gps.out.port = /dev/ttyUSB0
+gps.out.baud = 4800
+
+# Rotor
+rotor.port = /dev/ttyACM0
+rotor.baud = 9600
+rotor.azimuth.init = 246 # Eiffel Tower -> Trappes
+rotor.elevation.init = 0
+
+rotor.azimuth.min = 0
+rotor.azimuth.max = 360
+rotor.elevation.min = 0
+rotor.elevation.max = 90

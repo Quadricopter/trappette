@@ -1,0 +1,26 @@
+digraph trappette {
+
+    rankdir=LR;
+    { node [ shape=box ]
+        Antenna RTL2832U RX soundcard rs232
+    }
+    { node [ shape=box3d ]
+#        trappette
+    }
+
+    # Hardware
+    Antenna -> RTL2832U;
+    Antenna -> RX -> soundcard;
+
+    # Input
+    RTL2832U -> rtl_fm -> trappette;
+    RTL2832U -> gqrx -> nc -> trappette;
+    soundcard -> arecord -> trappette;
+    WAV -> sox -> trappette;
+
+    # Output
+    trappette -> console;
+    trappette -> rs232;
+    trappette -> ".nmea";
+    trappette -> ".kml";
+}

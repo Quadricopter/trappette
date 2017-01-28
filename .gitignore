@@ -1,0 +1,17 @@
+trappette
+trappette.exe
+samples/*
+doc/*
+kml/*
+nmea/*
+tmp/*
+bin/*
+obj/*
+*.o
+*.swp
+batch.pl
+*.sh
+.trappette.cfg
+trappette.cfg
+m10/libm10*
+*.nmea
