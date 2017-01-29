@@ -29,7 +29,7 @@ Usage
 --
 Copy trappette.cfg.sample file
 ```
-cp trappette.cfg.sammple trappette.cfg
+cp trappette.cfg.sample trappette.cfg
 ```
 and edit new trappette.cfg file to specify your QRA settings
 ```
