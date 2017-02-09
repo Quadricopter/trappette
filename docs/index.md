@@ -14,7 +14,7 @@ Avant toute chose, pour être sûr de partir sur de bonnes bases, mettez à jour
 	
 Dans votre console, exécutez la commande suivante :  
 
-	sudo aptget install cmake git libusb-1.0-0-dev
+	sudo apt-get install cmake git libusb-1.0-0-dev
 
 Elle permet d'installer les outils nécessaires :   
 
@@ -41,7 +41,7 @@ Elle permet d'installer les outils nécessaires :
 ( source: https://opendesignengine.net/news/53 )  
 
 	sudo bash                        (le mot de passe par defaut est "raspberry")  
-	echo "blacklist dvb_usb_rtl28xxu" > /etc/modprobe.d/blacklist.conf  
+	echo "blacklist dvb_usb_rtl28xxu" >> /etc/modprobe.d/blacklist.conf  
 	exit
 
 Eteignez votre Raspberry Pi  
