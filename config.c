@@ -10,7 +10,7 @@
 #include "kml.h"
 
 #define ASYNC_READ_BUFFER_SIZE  128
-#define CONFIG_BUFFER_SIZE      64
+#define CONFIG_BUFFER_SIZE      128
 #define DEFAULT_GPS_BAUD        4800
 
 static  config_t    *gl_pConfig;
@@ -29,6 +29,7 @@ int async_read_config_cb(char *dst, int size, void *data)
 int trim_config_line(char *szLine)
 {
     int n;
+    char    tmp[CONFIG_BUFFER_SIZE];
 
     // Remove EOL
     for (n = strlen(szLine)-1; n >= 0; n--)
@@ -38,8 +39,11 @@ int trim_config_line(char *szLine)
     // Remove space and tab
     for (n = 0; n < strlen(szLine); n++)
         if (szLine[n])
-            while ((szLine[n] == ' ') || (szLine[n] == '\t'))
-                strcpy(&szLine[n], &szLine[n+1]);
+            while ((szLine[n] == ' ') || (szLine[n] == '\t')) {
+
+                strcpy(tmp, &szLine[n+1]);
+                strcpy(&szLine[n], tmp);
+            }
 
     return 0; 
 }
