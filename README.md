@@ -1,7 +1,7 @@
 MeteoModem M10 Radiosonde decoding
 --
 
-The following source code has been submitted and validated by MeteoModem prior the release  
+The following source code has been submitted and authorized to diffusion by MeteoModem prior the release  
 http://www.meteomodem.com
 
 **/!\ NEVER TRY TO CATCH AN EXPERIMENTAL RADIOSONDE /!\**
