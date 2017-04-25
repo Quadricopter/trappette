@@ -4,7 +4,7 @@ MeteoModem M10 Radiosonde decoding
 The following source code has been submitted and authorized to diffusion by MeteoModem prior the release  
 http://www.meteomodem.com
 
-**/!\ NEVER TRY TO CATCH AN EXPERIMENTAL RADIOSONDE /!\**
+**/!\ NEVER TRY TO CATCH AN EXPERIMENTAL RADIOSONDE /!\\**
 
 If you find an experimental radiosonde of MeteoModem, Météo-France, CNES, etc... **DON'T TOUCH IT!**  
 A team is already on way to recover it.  
