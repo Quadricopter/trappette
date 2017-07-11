@@ -176,10 +176,9 @@ sox votre_fichier.wav -b 16 -e signed-integer -c 1 -r 48k -t raw - | ./trappette
 ## 10. OPTIONS
 
 ```
-Usage: ./trappette [-h] [-k kmlfile] [-n nemafile] [-gpsout] [-hex] [-v]  
+Usage: ./trappette [-k kmlfile] [-n nemafile] [-gpsout] [-hex] [-v]  
                    [-a seconds] [-t seconds] [-q lat:lon:alt]  
 		   
- -h: liste les différentes options disponibles
  -k: indique le nom d'un fichier de sortie au format .kml 
  -n: indique le nom d'un fichier de sortie au format gps .nema
  -gpsout: autorise la sortie au format NEMA sur le port série
