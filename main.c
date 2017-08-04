@@ -37,21 +37,23 @@
 
 void usage(char *prgname)
 {   
-    fprintf(stderr, "Usage: %s [-k kmlfile] [-n nemafile] [-gpsout] [-hex] [-v]\n", prgname);
+    fprintf(stderr, "Usage: %s [-k kmlfile] [-n nemafile] [-gpsout] [-h] [-v]\n", prgname);
 #ifdef ENABLE_WATCHDOG
     fprintf(stderr, "                   [-a seconds] [-t seconds]\n");
 #endif
-    fprintf(stderr, "                   [-q lat:lon[:alt]]\n");
+    fprintf(stderr, "                   [-q lat:lon[:alt]] [-r] [-f]\n");
     fprintf(stderr, " -k: specifie an .kml output file\n");
     fprintf(stderr, " -n: specifie an .nema gps output file\n");
     fprintf(stderr, " -gpsout: NEMA output on serial port\n");
-    fprintf(stderr, " -hex: hexadecimal dump\n");
+    fprintf(stderr, " -h: hexadecimal dump\n");
     fprintf(stderr, " -v: verbose\n");
 #ifdef ENABLE_WATCHDOG
     fprintf(stderr, " -a: abort time ( nothing received at all )\n");
     fprintf(stderr, " -t: time out ( after last received position )\n");
 #endif
     fprintf(stderr, " -q: overwrite QRA position\n");
+    fprintf(stderr, " -r: rotor output on serial port\n");
+    fprintf(stderr, " -f: internal filter mode, 0 = disabled, 1 = enabled (default)\n");
 }
 
 void sigkillhandler(int i) // Ctrl+C or Timer
@@ -376,9 +378,9 @@ int main(int ac, char *av[])
      */
 
 #ifdef ENABLE_WATCHDOG
-    while ((opt = getopt(ac, av, "q:h:i:k:n:g:vr:a:t:")) != -1) {
+    while ((opt = getopt(ac, av, "q:hk:n:g:vrf:a:t:")) != -1) {
 #else
-    while ((opt = getopt(ac, av, "q:h:i:k:n:g:vr:")) != -1) {
+    while ((opt = getopt(ac, av, "q:hk:n:g:vrf:")) != -1) {
 #endif
         switch (opt) {
 
@@ -386,13 +388,7 @@ int main(int ac, char *av[])
                 config.szKmlFileName = strdup(optarg);
                 break;
             case 'h':
-                if (!strncmp(optarg, "ex", 2)) {
-                    M10_setStreamCallback(&m10ctx, stream_dump_cb, NULL);
-                }
-                else {
-                    usage(av[0]);
-                    exit(EXIT_FAILURE);
-                }
+                M10_setStreamCallback(&m10ctx, stream_dump_cb, NULL);
                 break;
             case 'n':
                 config.szNmeaFileName = strdup(optarg);
@@ -403,9 +399,7 @@ int main(int ac, char *av[])
                 }
                 break;
             case 'r':
-                if (!strncmp(optarg, "otor", 4)) {
                     config.enableRotor = 1;
-                }
                 break;
             case 'v':
                 M10_setVerboseLevel(&m10ctx, 1);
@@ -420,6 +414,9 @@ int main(int ac, char *av[])
 #endif
             case 'q':
                 Config_overwriteQRA(&config, optarg);
+                break;
+            case 'f':
+                M10_setFilterMode(&m10ctx, atoi(optarg));
                 break;
             default: /* '?' */
                 usage(av[0]);

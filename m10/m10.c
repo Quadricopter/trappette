@@ -27,6 +27,7 @@ void    M10_init(m10_t *ctx)
     Manchester_init(&ctx->demod);
     psk_init(&ctx->psk, m10_psk_full_cb, (void*)&ctx->demod);
     sync_init(&ctx->syncctx);
+    ctx->filterMode = FILTER_ENABLED;
 }
 
 void    M10_release(m10_t *ctx)
@@ -63,10 +64,14 @@ void    M10_process16bit48k(m10_t *ctx, int16_t *samples, uint16_t samplesRead)
          */
 
         rawSample = samples[m];
-        low_pass_filter_q16(SIGNAL_LOW_PASS, &ctx->qSigLp, rawSample<<16);
-        low_pass_filter_q16(DC_CUT_LOW_PASS, &ctx->qDcLp,  rawSample<<16);
+        newSample = rawSample;
 
-        newSample = (ctx->qSigLp - ctx->qDcLp)>>16;       // Remove DC + Lowpass 
+        if (ctx->filterMode != FILTER_DISABLED) {
+
+            low_pass_filter_q16(SIGNAL_LOW_PASS, &ctx->qSigLp, rawSample<<16);
+            low_pass_filter_q16(DC_CUT_LOW_PASS, &ctx->qDcLp,  rawSample<<16);
+            newSample = (ctx->qSigLp - ctx->qDcLp)>>16;       // Remove DC + Lowpass 
+        }
 
         /*
          * Zero crossing - Clock synchronization
@@ -111,4 +116,9 @@ void    M10_process16bit48k(m10_t *ctx, int16_t *samples, uint16_t samplesRead)
 void    M10_setVerboseLevel(m10_t *ctx, uint8_t level)
 {
     ctx->demod.verboseLevel = level;
+}
+
+void    M10_setFilterMode(m10_t *ctx, FilterMode_t filterMode)
+{
+    ctx->filterMode = filterMode;
 }
