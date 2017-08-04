@@ -61,16 +61,18 @@ sox yourfile.wav -b 16 -e signed-integer -c 1 -r 48k -t raw - | ./trappette
 Options
 --
 ```
-Usage: ./trappette [-k kmlfile] [-n nemafile] [-gpsout] [-hex]
+Usage: ./trappette [-k kmlfile] [-n nemafile] [-gpsout] [-h]
                    [-a seconds] [-t seconds]
-                   [-q lat:lon[:alt]]
+                   [-q lat:lon[:alt]] [-f filter] [-r]
  -k: specifie an .kml output file
  -n: specifie an .nema gps output file
  -gpsout: NEMA output on serial port
- -hex: hexadecimal dump
+ -h: hexadecimal dump
  -a: abort time ( nothing received at all )
  -t: time out ( after last received position )
  -q: overwrite QRA position
+ -r: enable rotor
+ -f: internal filter mode, 0 = disabled, 1 = enabled (default)
 ```
 Regards,  
 Michael
