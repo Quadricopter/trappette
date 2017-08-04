@@ -41,7 +41,7 @@ void usage(char *prgname)
 #ifdef ENABLE_WATCHDOG
     fprintf(stderr, "                   [-a seconds] [-t seconds]\n");
 #endif
-    fprintf(stderr, "                   [-q lat:lon[:alt]] [-r] [-f]\n");
+    fprintf(stderr, "                   [-q lat:lon[:alt]] [-r] [-f filter]\n");
     fprintf(stderr, " -k: specifie an .kml output file\n");
     fprintf(stderr, " -n: specifie an .nema gps output file\n");
     fprintf(stderr, " -gpsout: NEMA output on serial port\n");
@@ -53,7 +53,7 @@ void usage(char *prgname)
 #endif
     fprintf(stderr, " -q: overwrite QRA position\n");
     fprintf(stderr, " -r: rotor output on serial port\n");
-    fprintf(stderr, " -f: internal filter mode, 0 = disabled, 1 = enabled (default)\n");
+    fprintf(stderr, " -f: internal filter mode: 0 = disabled, 1 = enabled (default)\n");
 }
 
 void sigkillhandler(int i) // Ctrl+C or Timer
