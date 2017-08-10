@@ -25,28 +25,28 @@
  *
  */
 
-void    Manchester_init(demod_ctx_t *ctx)
+void    Manchester_init(manchester_t *ctx)
 {
-    memset(ctx, 0, sizeof(demod_ctx_t));
+    memset(ctx, 0, sizeof(manchester_t));
     ctx->lastManchesterBit = -1;
     ctx->previousFrameType = FRAMETYPE_NOISE_WAITSYNC;
     ctx->lastDiffBit = 1;
     ctx->bitSkipCountTotal = DEFAULT_BIT_SKIP;
 }
 
-void    Manchester_setTsipCallback(demod_ctx_t *ctx, int (*tsip_cb)(const tsip_t *tsip, void *data), void *data)
+void    Manchester_setTsipCallback(manchester_t *ctx, int (*tsip_cb)(const tsip_t *tsip, void *data), void *data)
 {
     ctx->tsip_cb = tsip_cb;
     ctx->tsip_cb_data = data;
 }
 
-void    Manchester_setStreamCallback(demod_ctx_t *ctx, int (*stream_cb)(const uint8_t *stream, uint16_t size, void *data), void *data)
+void    Manchester_setStreamCallback(manchester_t *ctx, int (*stream_cb)(const uint8_t *stream, uint16_t size, void *data), void *data)
 {
     ctx->stream_cb = stream_cb;
     ctx->stream_cb_data = data;
 }
 
-void    Manchester_newHalfBit(demod_ctx_t *ctx, uint8_t bit)
+void    Manchester_newHalfBit(manchester_t *ctx, uint8_t bit)
 {
     if (ctx->verboseLevel > 0)
         fprintf(stderr, "[%04d] %d", ctx->count, bit);
@@ -201,7 +201,7 @@ void    Manchester_newHalfBit(demod_ctx_t *ctx, uint8_t bit)
     ctx->count++;
 }
 
-void    Manchester_newStream(demod_ctx_t *ctx, const uint8_t *stream, uint16_t byteCount)
+void    Manchester_newStream(manchester_t *ctx, const uint8_t *stream, uint16_t byteCount)
 {
     uint16_t    n;
     uint8_t     bit;

@@ -3,7 +3,6 @@
 
 #include "sync.h"
 #include "manchester.h"
-#include "psk.h"
 #include "tsip.h"
 #include "filter.h"
 
@@ -20,8 +19,7 @@ typedef struct  m10_s {
 
     /* */
     sync_t      syncctx;
-    psk_t       psk;
-    demod_ctx_t demod;
+    manchester_t    manchester;
 
     /* */
     void        *streamCbData;

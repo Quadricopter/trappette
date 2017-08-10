@@ -8,48 +8,27 @@
  *
  */
 
-int m10_psk_full_cb(psk_t *psk, void *data)
-{
-    demod_ctx_t *pDemod = (demod_ctx_t*)data;
-    Manchester_newStream(pDemod, psk->pskBuffer, psk->byteIdx);
-
-    return 0;
-}
-
-/*
- *
- */
-
 void    M10_init(m10_t *ctx)
 {
     memset(ctx, 0, sizeof(m10_t));
 
-    Manchester_init(&ctx->demod);
-    psk_init(&ctx->psk, m10_psk_full_cb, (void*)&ctx->demod);
+    Manchester_init(&ctx->manchester);
     sync_init(&ctx->syncctx);
     ctx->filterMode = FILTER_ENABLED;
 }
 
 void    M10_release(m10_t *ctx)
 {
-    /*
-     * Flush PSK buffer
-     */
-
-    if (ctx->psk.byteIdx || ctx->psk.bitIdx) {
-
-        Manchester_newStream(&ctx->demod, ctx->psk.pskBuffer, ctx->psk.byteIdx);
-    }
 }
 
 void    M10_setStreamCallback(m10_t *ctx, int (*stream_cb)(const uint8_t *stream, uint16_t size, void *data), void *data)
 {
-    Manchester_setStreamCallback(&ctx->demod, stream_cb, data);
+    Manchester_setStreamCallback(&ctx->manchester, stream_cb, data);
 }
 
 void    M10_setTsipCallback(m10_t *ctx, int (*tsip_cb)(const tsip_t *tsip, void *data), void *data)
 {
-    Manchester_setTsipCallback(&ctx->demod, tsip_cb, data);
+    Manchester_setTsipCallback(&ctx->manchester, tsip_cb, data);
 }
 
 void    M10_process16bit48k(m10_t *ctx, int16_t *samples, uint16_t samplesRead)
@@ -99,11 +78,11 @@ void    M10_process16bit48k(m10_t *ctx, int16_t *samples, uint16_t samplesRead)
 
                 if (newSample > 0) {
 
-                    psk_addBit(&ctx->psk, 1);
+                    Manchester_newHalfBit(&ctx->manchester, 1);
                 }
                 else {
 
-                    psk_addBit(&ctx->psk, 0);
+                    Manchester_newHalfBit(&ctx->manchester, 0);
                 }
             }
         }
@@ -115,7 +94,7 @@ void    M10_process16bit48k(m10_t *ctx, int16_t *samples, uint16_t samplesRead)
 
 void    M10_setVerboseLevel(m10_t *ctx, uint8_t level)
 {
-    ctx->demod.verboseLevel = level;
+    ctx->manchester.verboseLevel = level;
 }
 
 void    M10_setFilterMode(m10_t *ctx, FilterMode_t filterMode)
