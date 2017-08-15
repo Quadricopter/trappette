@@ -7,6 +7,9 @@
 #define DEFAULT_BYTE_SIZE   8
 #define DEFAULT_BIT_SKIP    3
 
+#define PREAMBLE_MIN_BYTES_LENGTH   3
+const char szPreambleStream[PREAMBLE_MIN_BYTES_LENGTH]= { 0xAA, 0xAA, 0xAA };
+
 /*
  * --------------------------------------------------------------------------
  */
@@ -19,10 +22,7 @@
 void    Manchester_init(manchester_t *ctx)
 {
     memset(ctx, 0, sizeof(manchester_t));
-    ctx->lastManchesterBit = -1;
-    ctx->previousFrameType = FRAMETYPE_NOISE_WAITSYNC;
-    ctx->lastDiffBit = 1;
-    ctx->bitSkipCountTotal = DEFAULT_BIT_SKIP;
+    ctx->signalType = SIGNALTYPE_NOISE;
 }
 
 void    Manchester_setTsipCallback(manchester_t *ctx, int (*tsip_cb)(const tsip_t *tsip, void *data), void *data)
@@ -40,104 +40,92 @@ void    Manchester_setStreamCallback(manchester_t *ctx, int (*stream_cb)(const u
 void    Manchester_newHalfBit(manchester_t *ctx, uint8_t bit)
 {
     if (ctx->verboseLevel > 0)
-        fprintf(stderr, "[%04d] %d", ctx->count, bit);
+        fprintf(stderr, "%d",  bit);
 
     if (bit == ctx->lastManchesterBit && ctx->waitHalfManchesterBit == 1) {
 
         // Manchester unsync, skip half period for resync
-        if (ctx->verboseLevel > 0)
-            fprintf(stderr, " # Sync lost...\n");
-//        fprintf(stdout, "\n");
-        ctx->waitHalfManchesterBit = 1;
-        ctx->byte = 0;
-        ctx->bitIdx = 0;
-        ctx->bitIdx = DEFAULT_BYTE_SIZE-1;
-        ctx->bitSkipCount =  ctx->bitSkipCountTotal;
+//        if (ctx->verboseLevel > 0)
+//            fprintf(stderr, " # Sync lost...\n");
 
         /*
-         * Frame type
+         * Signal type
          */
 
-        if (ctx->asciiBufferSize >= 40 &&
-            strstr(ctx->asciiBuff, "1010101010101010101010101010101010101010") &&
-            ctx->previousFrameType == FRAMETYPE_NOISE_WAITSYNC) {
+        switch (ctx->signalType) {
 
-            if (ctx->verboseLevel > 0)
-                fprintf(stderr, "#SYNC\n");
-            ctx->previousFrameType = FRAMETYPE_SYNC;
+            case SIGNALTYPE_NOISE:
+
+                if (ctx->bufferSize >= PREAMBLE_MIN_BYTES_LENGTH &&
+                    memcmp(ctx->buff, szPreambleStream, PREAMBLE_MIN_BYTES_LENGTH)) {
+
+                    if (ctx->verboseLevel > 0)
+                        fprintf(stderr, "#PREMABLE\n");
+                    ctx->signalType = SIGNALTYPE_PREAMBLE;
+                }
+                break;
+
+            case SIGNALTYPE_PREAMBLE:
+
+                if (ctx->bufferSize == 0 &&
+                    ( ctx->byte == 0x80 || ctx->byte == 0x40 ) ){
+
+                    if (ctx->verboseLevel > 0)
+                        fprintf(stderr, "#HEADER\n");
+                    ctx->signalType = SIGNALTYPE_HEADER;
+                }
+                break;
+
+            case SIGNALTYPE_HEADER:
+
+                if (ctx->bufferSize >= TSIP_PACKET_SIZE-1) {
+
+                    if (ctx->verboseLevel > 0)
+                        fprintf(stderr, "#DATA\n");
+                    ctx->signalType = SIGNALTYPE_DATA;
+                }
+                break;
+
+            case SIGNALTYPE_DATA:
+
+                // Clean last noise bits
+                ctx->buff[TSIP_PACKET_SIZE] = 0;
+                ctx->bufferSize = TSIP_PACKET_SIZE;
+
+                if (ctx->stream_cb)
+                    ctx->stream_cb(ctx->buff, ctx->bufferSize, ctx->stream_cb_data);
+
+                if (TSIP_string2Struct(&ctx->tsip, (const uint8_t*)ctx->buff, ctx->bufferSize) == 0) {
+
+                    /*
+                     * User callback
+                     */
+
+                    if (ctx->tsip_cb)
+                        ctx->tsip_cb((const tsip_t*)&ctx->tsip, ctx->tsip_cb_data);
+                }
+
+                ctx->bufferSize = 0;
+                ctx->signalType = SIGNALTYPE_NOISE;
+                break;
         }
-        else if (ctx->asciiBufferSize == 3 &&
-                 (!strncmp(ctx->asciiBuff, "101", 3) || !strncmp(ctx->asciiBuff, "010", 3)) &&
-                 ctx->previousFrameType == FRAMETYPE_SYNC) {
 
-            if (ctx->verboseLevel > 0)
-                fprintf(stderr, "#PREAMBLE\n");
-            ctx->previousFrameType = FRAMETYPE_PREAMBLE;
-        }
-        else if (ctx->asciiBufferSize >= 800 &&
-                 ctx->previousFrameType == FRAMETYPE_PREAMBLE) {
-
-            if (ctx->verboseLevel > 0)
-                fprintf(stderr, "#DATA\n");
-            ctx->previousFrameType = FRAMETYPE_DATA;
-        }
-        else
-            ctx->previousFrameType = FRAMETYPE_NOISE_WAITSYNC;
-
-        /*
-         * Frame dump...
-         */
-
-        if (ctx->previousFrameType == FRAMETYPE_DATA) {
-
-            // Clean last noise bits
-            ctx->buff[TSIP_PACKET_SIZE] = 0;
-            ctx->bufferSize = TSIP_PACKET_SIZE;
-
-            if (ctx->stream_cb)
-                ctx->stream_cb(ctx->buff, ctx->bufferSize, ctx->stream_cb_data);
-
-            if (TSIP_string2Struct(&ctx->tsip, (const uint8_t*)ctx->buff, ctx->bufferSize) == 0) {
-
-                /*
-                 * User callback
-                 */
-
-                if (ctx->tsip_cb)
-                    ctx->tsip_cb((const tsip_t*)&ctx->tsip, ctx->tsip_cb_data);
-
-                if (ctx->tsip.dAltitude > ctx->dMaxAltitude)
-                    ctx->dMaxAltitude = ctx->tsip.dAltitude;
-            }
-        }
-
-        ctx->asciiBufferSize = 0;
         ctx->bufferSize = 0;
+
+        ctx->byte = 0;
+        ctx->bitIdx = DEFAULT_BYTE_SIZE-1;
+        ctx->bitSkipCount = DEFAULT_BIT_SKIP;
     }
     else {
 
-        if (ctx->waitHalfManchesterBit ==0) {
+        if (ctx->waitHalfManchesterBit == 0) {
 
             // First half period Manchester bit
             ctx->waitHalfManchesterBit = 1;
         }
         else {
 
-            // Second half period Manchester bit
-            if (ctx->verboseLevel > 0) {
-
-//                fprintf(stderr, " [%d]", bit);
-                fprintf(stderr, " [%d]", bit==ctx->lastDiffBit?1:0);
-            }
-
             ctx->waitHalfManchesterBit = 0;
-
-            /*
-             * ASCII buffer
-             */
-
-            ctx->asciiBuff[ctx->asciiBufferSize] = bit + '0';
-            ctx->asciiBufferSize++;
 
             /*
              * Binary buffer
@@ -154,8 +142,8 @@ void    Manchester_newHalfBit(manchester_t *ctx, uint8_t bit)
 
             if (ctx->bitIdx == 0) {
 
-                if (ctx->verboseLevel > 0)
-                    fprintf(stderr, " --> buff[%03d] = %02X", ctx->bufferSize, ctx->byte);
+//                if (ctx->verboseLevel > 0)
+//                    fprintf(stderr, " --> buff[%03d] = %02X\n", ctx->bufferSize, ctx->byte);
 
                 ctx->buff[ctx->bufferSize] = ctx->byte;
 
@@ -166,50 +154,37 @@ void    Manchester_newHalfBit(manchester_t *ctx, uint8_t bit)
                     ctx->buff[0] = ctx->buff[0] & 0x7F;
                 }
                 ctx->bufferSize++;
+                if (ctx->bufferSize >= BUFFER_SIZE) {
+
+                    /* Overflow protection */
+                    ctx->signalType = SIGNALTYPE_NOISE;
+                    ctx->bufferSize = 0;
+                }
                 ctx->bitIdx = DEFAULT_BYTE_SIZE-1;
                 ctx->byte = 0;
             }
             else {
 
-                if (ctx->bitSkipCount) {
+                ctx->bitIdx--;
+                if (ctx->bitSkipCount > 0) {
 
-                    if (ctx->verboseLevel > 0)
-                        fprintf(stderr, " skip...\n");
-//                    fprintf(stdout, "\n");
                     ctx->bitSkipCount--;
+                    if (ctx->bitSkipCount == 0)
+                        ctx->bitIdx = DEFAULT_BYTE_SIZE - 1;
                 }
-                else
-                    ctx->bitIdx--;
             }
 
         }
-
-        if (ctx->verboseLevel > 0)
-            fprintf(stderr, "\n");
     }
 
     ctx->lastManchesterBit = bit;
-    ctx->count++;
 }
 
-void    Manchester_newStream(manchester_t *ctx, const uint8_t *stream, uint16_t byteCount)
+void    Manchester_dumpBuffer(manchester_t *ctx)
 {
     uint16_t    n;
-    uint8_t     bit;
 
-//    fprintf(stderr, "%s(%p, %d)\n", __FUNCTION__, stream, byteCount);
-
-    for (n = 0; n < byteCount; n++) {
-
-        /* Binary stream */
-        for (bit = 0; bit < 8; bit++) {
-
-            if (stream[n] & (1<<bit)) {
-                Manchester_newHalfBit(ctx, 1);
-            }
-            else {
-                Manchester_newHalfBit(ctx, 0);
-            }
-        }
-    }
+    for (n = 0; n < ctx->bufferSize; n++)
+        fprintf(stderr, "%02X", ctx->buff[n]);
+    fprintf(stderr, "\n");
 }

@@ -8,7 +8,7 @@
  * --------------------------------------------------------------------------
  */
 
-#define BUFFER_SIZE         2048
+#define BUFFER_SIZE         128
 
 
 /*
@@ -17,11 +17,11 @@
 
 typedef enum    {
 
-    FRAMETYPE_NOISE_WAITSYNC = 0,
-    FRAMETYPE_SYNC,
-    FRAMETYPE_PREAMBLE,
-    FRAMETYPE_DATA
-} frametype_t;
+    SIGNALTYPE_NOISE = 0,
+    SIGNALTYPE_PREAMBLE,
+    SIGNALTYPE_HEADER,
+    SIGNALTYPE_DATA
+} signaltype_t;
 
 typedef struct  {
 
@@ -33,25 +33,22 @@ typedef struct  {
     int     (*stream_cb)(const uint8_t *stream, uint16_t size, void *data);
     void    *stream_cb_data;
 
-    /* */
+    /* Flags */
     uint8_t     verboseLevel;
-    uint32_t    count;
-    int8_t      lastManchesterBit;
+    uint8_t     lastManchesterBit;
+    uint8_t     waitHalfManchesterBit;
+    uint8_t     lastDiffBit;
+
+    /* */
     uint8_t     byte;
     int8_t      bitIdx;
-    uint8_t     waitHalfManchesterBit;
-    uint8_t     bitSkipCountTotal;
-    uint8_t     bitSkipCount;
-    uint8_t     lastDiffBit;
+    int8_t      bitSkipCount;
 
     uint8_t     buff[BUFFER_SIZE];
     uint16_t    bufferSize;
-    char        asciiBuff[BUFFER_SIZE]; // Deprecated!!!
-    uint16_t    asciiBufferSize;        // Deprecated!!!
-    frametype_t previousFrameType;
+    signaltype_t signalType;
 
     tsip_t      tsip;
-    double      dMaxAltitude;
 }   manchester_t;
 
 /*
