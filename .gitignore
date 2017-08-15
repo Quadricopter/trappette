@@ -14,4 +14,5 @@ batch.pl
 .trappette.cfg
 trappette.cfg
 m10/libm10*
+core/core*
 *.nmea

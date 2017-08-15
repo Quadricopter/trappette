@@ -1,35 +1,34 @@
-# Uncomment following line to activate Watchdog
-ENABLE_WATCHDOG = y
+include config.mk
 
-SRCS	= main.c kml.c wgs84.c rotor.c config.c reader.c wordtab.c gps.c serial_unix.c
-OBJS	= $(SRCS:.c=.o)
-INC		= -I./m10
-CFLAGS	= -Wall $(INC)
-LDFLAGS	= -L./m10 -lm10 -lm
 NAME	= trappette
 CC		= gcc
+LDFLAGS	= -lm
+
 
 ifeq ($(ENABLE_WATCHDOG), y)
 
-SRCS	+= watchdog.c
-CFLAGS	+= -DENABLE_WATCHDOG
-LDFLAGS	+= -lrt -pthread
+LDFLAGS += -lrt -pthread
 
 endif
 
 ##########
 
-all: libm10 bin
+all: libm10 libcore bin
 
-bin: $(OBJS)
-	$(CC) -static $(OBJS) -o $(NAME) $(LDFLAGS)
+bin:
+	$(CC) -o $(NAME) core/core.a m10/libm10.a $(LDFLAGS)
 
+libcore:
+	echo "### Building core ###"; \
+    (cd core; make all);
+	
 libm10:
 	echo "### Building libm10 ###"; \
     (cd m10; make all);
 	
 clean:
 	(cd m10; make clean);
+	(cd core; make clean);
 	rm -rf *.o *~ \#*
 	rm -f $(NAME)
 
