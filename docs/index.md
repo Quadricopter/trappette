@@ -18,14 +18,14 @@ Dans votre console, exécutez la commande suivante :
 
 Elle permet d'installer les outils nécessaires :   
 
-* git ( pour récupérer les sources de rtlsdr)
-* cmake ( pour compiler rtlsdr)
+* git ( pour récupérer les sources de rtlsdr )
+* cmake ( pour compiler rtlsdr )
 * libusb-1.0-0-dev ( lien entre les programmes de rtlsdr et le hardware )  
 
 
 ## 2.	RÉCUPÉRER RTL-SDR  
 
-(source : http://sdr.osmocom.org/trac/wiki/rtlsdr])  
+(source : https://osmocom.org/projects/sdr/wiki/rtl-sdr )
 
 	git clone git://git.osmocom.org/rtl-sdr.git
 	cd rtl-sdr
