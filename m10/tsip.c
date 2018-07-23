@@ -3,9 +3,10 @@
 #include <string.h>
 #include <math.h>
 #include <time.h>
+
 #include "tsip.h"
 #include "checksum.h"
-
+#include "endian_util.h"
 
 #define SEMI_2_DEG          (180.f / 2147483647)    /* 2^-31 semicircle to deg */
 
@@ -15,21 +16,6 @@
 #define SECONDS_PER_WEEK    (SECONDS_PER_DAY*7)
 
 /*
- *
- */
-
-uint32_t    getu32(const uint8_t *data)
-{
-    return data[0]<<24 | data[1]<<16 | data[2]<<8 | data[3];
-}
-
-uint32_t    geti16(const uint8_t *data)
-{
-    return data[0]<<8 | data[1];
-}
-
-
-/*
  * TSIP time conversion
  *
  * 63530-10_Rev-B_Manual_Copernicus-II.pdf p58/254
@@ -37,7 +23,7 @@ uint32_t    geti16(const uint8_t *data)
  * The seconds count begins at midnight each Sunday morning
  */
 
-time_t  TSIP_generateTimestamp(uint32_t second, uint16_t week)
+time_t  TSIP_generateTimestamp_AF(uint32_t second, uint16_t week)
 {
     time_t t;
 
@@ -52,7 +38,7 @@ time_t  TSIP_generateTimestamp(uint32_t second, uint16_t week)
  * Fill TSIP strcut from 0x8F-20 string
  */
 
-int TSIP_string2Struct(tsip_t *pTsip, const uint8_t *buff, uint8_t size)
+int TSIP_string2Struct(tsip_t *pTsip, const uint8_t *pStream, uint8_t size)
 {
     const uint8_t *pSuperPacket = NULL;
     uint32_t    time_ms;
@@ -64,7 +50,7 @@ int TSIP_string2Struct(tsip_t *pTsip, const uint8_t *buff, uint8_t size)
     double      dScale;
     int16_t     northVelocity, eastVelocity, upVelocity;
 
-    if (!pTsip || !buff || (size != TSIP_PACKET_SIZE))
+    if (!pTsip || !pStream || (size != TSIP_PACKET_SIZE))
         return -1;
 
     memset(pTsip, 0, sizeof(tsip_t));
@@ -73,34 +59,32 @@ int TSIP_string2Struct(tsip_t *pTsip, const uint8_t *buff, uint8_t size)
      * Compute Checksum
      */
 
-    pTsip->bIsValidChecksum = isValidM10Checksum(buff, size);
+    pTsip->bIsValidChecksum = isValidM10Checksum(pStream, size);
 
     /*
-     * SuperPacket "0x8F-20" excerpt
-     * 63530-10_Rev-B_Manual_Copernicus-II.pdf p177
+     * M10 - Copernicus
      */
 
-    if (buff[1] == 0x9F && buff[2] == 0x20) {
+    if (!memcmp(pStream, "\x64\x9F\x20", 3)) {
 
         /*
          * Grab informations from SuperPacketString
+     	 * SuperPacket "0x8F-20" excerpt
+         * 63530-10_Rev-B_Manual_Copernicus-II.pdf p177
          */
 
-        pSuperPacket = &buff[2];
+        pSuperPacket = &pStream[2];
 
-        time_ms = getu32((const uint8_t*)&pSuperPacket[8]);             // GPS Time,  UINT32, GPS Time in milliseconds
-        latitude = (int32_t)getu32((const uint8_t*)&pSuperPacket[12]);  // Latitude,   INT32, WGS-84 latitude, 2^31 semicircle (-90 -> 90)
-        longitude = getu32((const uint8_t*)&pSuperPacket[16]);          // Longitude, UINT32, WGS-84 longitude, 2^31 semicircle (0 -> 360)
-        altitude = (int32_t) getu32((const uint8_t*)&pSuperPacket[20]); // Altitude above WGS-84 ellipsoid, mm
+        eastVelocity  = (int16_t) getu16_be((const uint8_t*)&pSuperPacket[2]);
+        northVelocity = (int16_t) getu16_be((const uint8_t*)&pSuperPacket[4]);
+        upVelocity    = (int16_t) getu16_be((const uint8_t*)&pSuperPacket[6]);
+        time_ms = getu32_be((const uint8_t*)&pSuperPacket[8]);             // GPS Time,  UINT32, GPS Time in milliseconds
+        latitude = (int32_t) getu32_be((const uint8_t*)&pSuperPacket[12]);  // Latitude,   INT32, WGS-84 latitude, 2^31 semicircle (-90 -> 90)
+        longitude = getu32_be((const uint8_t*)&pSuperPacket[16]);          // Longitude, UINT32, WGS-84 longitude, 2^31 semicircle (0 -> 360)
+        altitude = (int32_t) getu32_be((const uint8_t*)&pSuperPacket[20]); // Altitude above WGS-84 ellipsoid, mm
         utcOffset = pSuperPacket[29];                                   // UTC Offset, UINT8, Number of leap seconds between UTC and GPS time.
-        week = geti16((const uint8_t*)&pSuperPacket[30]);               // Week,       INT16, GPS time of fix, weeks.
+        week = getu16_be((const uint8_t*)&pSuperPacket[30]);               // Week,       INT16, GPS time of fix, weeks.
 
-        /* Convert GPS Epoch to UNIX Epoch */
-        pTsip->unixEpoch = TSIP_generateTimestamp(time_ms/1000-utcOffset + 1, week);  // p59/254
-
-        eastVelocity  = geti16((const uint8_t*)&pSuperPacket[2]);
-        northVelocity = geti16((const uint8_t*)&pSuperPacket[4]);
-        upVelocity    = geti16((const uint8_t*)&pSuperPacket[6]);
         dScale = 0.005f;
         if (pSuperPacket[24] & 0x01)                                    // Velocity scale
             dScale = 0.020f;
@@ -108,6 +92,8 @@ int TSIP_string2Struct(tsip_t *pTsip, const uint8_t *buff, uint8_t size)
         /*
          * Fill destination struct, The seconds count begins at the midnight which begins each Sunday morning
          */
+
+        pTsip->unixEpoch = TSIP_generateTimestamp_AF(time_ms/1000-utcOffset + 1, week);  // p59/254
 
         pTsip->dLatitude  = (double) latitude * SEMI_2_DEG;
         pTsip->dLongitude = (double) longitude * SEMI_2_DEG;
@@ -130,7 +116,7 @@ int TSIP_string2Struct(tsip_t *pTsip, const uint8_t *buff, uint8_t size)
      * GPS status packet
      */
 
-    if (buff[1] == 0x49) {
+    if (!memcmp(pStream, "\x64\x49", 2)) {
 
         //TODO
         return -1;
