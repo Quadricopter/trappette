@@ -31,7 +31,7 @@ typedef struct  {
  *
  */
 
-int TSIP_string2Struct(tsip_t *pTsip, const uint8_t *buff, uint8_t size);
+int TSIP_stream2Struct(tsip_t *pTsip, const uint8_t *pStream, uint8_t size);
 int TSIP_getTime(uint8_t *hour, uint8_t *min, uint8_t *sec, const tsip_t *pTsip);
 void    TSIP_timeToString(char *dst, uint32_t seconds);
 

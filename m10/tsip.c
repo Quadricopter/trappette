@@ -8,12 +8,13 @@
 #include "checksum.h"
 #include "endian_util.h"
 
-#define SEMI_2_DEG          (180.f / 2147483647)    /* 2^-31 semicircle to deg */
+#define SEMI_2_DEG          (180.f / 0x7FFFFFFF)    /* 2^-31 semicircle to deg */
 
 #define SECONDS_PER_DAY    86400
 #define SECONDS_PER_HOUR    3600
 #define TSIP_BASE_TIME 315964800   /* Timestamp for "January 6, 1980", UTC */
 #define SECONDS_PER_WEEK    (SECONDS_PER_DAY*7)
+
 
 /*
  * TSIP time conversion
@@ -23,7 +24,7 @@
  * The seconds count begins at midnight each Sunday morning
  */
 
-time_t  TSIP_generateTimestamp_AF(uint32_t second, uint16_t week)
+time_t  TSIP_generateTimestamp_9F(uint32_t second, uint16_t week)
 {
     time_t t;
 
@@ -38,7 +39,7 @@ time_t  TSIP_generateTimestamp_AF(uint32_t second, uint16_t week)
  * Fill TSIP strcut from 0x8F-20 string
  */
 
-int TSIP_string2Struct(tsip_t *pTsip, const uint8_t *pStream, uint8_t size)
+int TSIP_stream2Struct(tsip_t *pTsip, const uint8_t *pStream, uint8_t size)
 {
     const uint8_t *pSuperPacket = NULL;
     uint32_t    time_ms;
@@ -68,7 +69,7 @@ int TSIP_string2Struct(tsip_t *pTsip, const uint8_t *pStream, uint8_t size)
     if (!memcmp(pStream, "\x64\x9F\x20", 3)) {
 
         /*
-         * Grab informations from SuperPacketString
+         * Grab raw data from SuperPacketString
      	 * SuperPacket "0x8F-20" excerpt
          * 63530-10_Rev-B_Manual_Copernicus-II.pdf p177
          */
@@ -79,21 +80,21 @@ int TSIP_string2Struct(tsip_t *pTsip, const uint8_t *pStream, uint8_t size)
         northVelocity = (int16_t) getu16_be((const uint8_t*)&pSuperPacket[4]);
         upVelocity    = (int16_t) getu16_be((const uint8_t*)&pSuperPacket[6]);
         time_ms = getu32_be((const uint8_t*)&pSuperPacket[8]);             // GPS Time,  UINT32, GPS Time in milliseconds
-        latitude = (int32_t) getu32_be((const uint8_t*)&pSuperPacket[12]);  // Latitude,   INT32, WGS-84 latitude, 2^31 semicircle (-90 -> 90)
+        latitude = (int32_t) getu32_be((const uint8_t*)&pSuperPacket[12]); // Latitude,   INT32, WGS-84 latitude, 2^31 semicircle (-90 -> 90)
         longitude = getu32_be((const uint8_t*)&pSuperPacket[16]);          // Longitude, UINT32, WGS-84 longitude, 2^31 semicircle (0 -> 360)
         altitude = (int32_t) getu32_be((const uint8_t*)&pSuperPacket[20]); // Altitude above WGS-84 ellipsoid, mm
-        utcOffset = pSuperPacket[29];                                   // UTC Offset, UINT8, Number of leap seconds between UTC and GPS time.
+        utcOffset = pSuperPacket[29];                                      // UTC Offset, UINT8, Number of leap seconds between UTC and GPS time.
         week = getu16_be((const uint8_t*)&pSuperPacket[30]);               // Week,       INT16, GPS time of fix, weeks.
 
         dScale = 0.005f;
-        if (pSuperPacket[24] & 0x01)                                    // Velocity scale
+        if (pSuperPacket[24] & 0x01)                                       // Velocity scale
             dScale = 0.020f;
 
         /*
          * Fill destination struct, The seconds count begins at the midnight which begins each Sunday morning
          */
 
-        pTsip->unixEpoch = TSIP_generateTimestamp_AF(time_ms/1000-utcOffset + 1, week);  // p59/254
+        pTsip->unixEpoch = TSIP_generateTimestamp_9F(time_ms/1000-utcOffset + 1, week);  // p59/254
 
         pTsip->dLatitude  = (double) latitude * SEMI_2_DEG;
         pTsip->dLongitude = (double) longitude * SEMI_2_DEG;
@@ -119,6 +120,16 @@ int TSIP_string2Struct(tsip_t *pTsip, const uint8_t *pStream, uint8_t size)
     if (!memcmp(pStream, "\x64\x49", 2)) {
 
         //TODO
+        return -1;
+    }
+
+    /*
+     * M10 - Global Top Firefly
+     */
+
+    if (!memcmp(pStream, "\x64\xAF\x02", 3)) {
+
+        fprintf(stderr, "Unsupported radiosonde: Public release awaiting MeteoModem authorization.\n");
         return -1;
     }
 
