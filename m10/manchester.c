@@ -95,7 +95,7 @@ void    Manchester_newHalfBit(manchester_t *ctx, uint8_t bit)
                 if (ctx->stream_cb)
                     ctx->stream_cb(ctx->buff, ctx->bufferSize, ctx->stream_cb_data);
 
-                if (TSIP_string2Struct(&ctx->tsip, (const uint8_t*)ctx->buff, ctx->bufferSize) == 0) {
+                if (TSIP_stream2Struct(&ctx->tsip, (const uint8_t*)ctx->buff, ctx->bufferSize) == 0) {
 
                     /*
                      * User callback

@@ -38,7 +38,7 @@ time_t  TSIP_generateTimestamp_AF(uint32_t second, uint16_t week)
  * Fill TSIP strcut from 0x8F-20 string
  */
 
-int TSIP_string2Struct(tsip_t *pTsip, const uint8_t *pStream, uint8_t size)
+int TSIP_stream2Struct(tsip_t *pTsip, const uint8_t *pStream, uint8_t size)
 {
     const uint8_t *pSuperPacket = NULL;
     uint32_t    time_ms;
