@@ -35,6 +35,41 @@ time_t  TSIP_generateTimestamp_9F(uint32_t second, uint16_t week)
     return t;
 }
 
+time_t  TSIP_generateTimestamp_AF(uint32_t time24, uint32_t date24)
+{
+    time_t t;
+    uint8_t hour, min, sec, day, month, year;
+    struct tm tmp;
+
+    memset(&tmp, 0, sizeof(struct tm));
+
+//    fprintf(stdout, "[time] t:%d d:%d\n", time24, date24);
+
+    hour = time24 / 10000;
+    time24 -= hour * 10000;
+    min = time24 / 100;
+    sec = time24 - (min*100);
+
+    day = date24 / 10000;
+    date24 -= day * 10000;
+    month = date24 / 100;
+    year = date24 - (month*100);
+
+//    fprintf(stdout, "[time] %02d:%02d:%02d d:%02d:%02d:%02d\n", hour, min, sec, day, month, year);
+
+    tmp.tm_hour = hour;
+    tmp.tm_min = min;
+    tmp.tm_sec = sec;
+    tmp.tm_mday = day;
+    tmp.tm_mon = month - 1;
+    tmp.tm_year = year + 100;
+
+    t = timegm(&tmp);
+//    fprintf(stdout, "[time] %ld\n", t);
+
+    return t;
+}
+
 /*
  * Fill TSIP strcut from 0x8F-20 string
  */
@@ -129,8 +164,40 @@ int TSIP_stream2Struct(tsip_t *pTsip, const uint8_t *pStream, uint8_t size)
 
     if (!memcmp(pStream, "\x64\xAF\x02", 3)) {
 
-        fprintf(stderr, "Unsupported radiosonde: Public release awaiting MeteoModem authorization.\n");
-        return -1;
+        /*
+         * Grab raw values from stream
+         */
+
+        latitude = (int32_t)getu32_be((const uint8_t*)&pStream[4]);
+        longitude = getu32_be((const uint8_t*)&pStream[8]);
+        altitude = (int32_t) getu24_be((const uint8_t*)&pStream[12]);
+
+        eastVelocity  = (int16_t)getu16_be((const uint8_t*)&pStream[15]);
+        northVelocity = (int16_t)getu16_be((const uint8_t*)&pStream[17]);
+        upVelocity    = (int16_t)getu16_be((const uint8_t*)&pStream[19]);
+//        fprintf(stdout, "[Velocity] N:%d  E:%d  U:%d\n", northVelocity, eastVelocity, upVelocity);
+
+        int32_t t = (int32_t)getu24_be((const uint8_t*)&pStream[21]);
+        int32_t d = (int32_t)getu24_be((const uint8_t*)&pStream[24]);
+
+        /*
+         * Fill destinatino struct
+         */
+
+        pTsip->unixEpoch = TSIP_generateTimestamp_AF(t, d);
+
+        pTsip->dLatitude  = (double) latitude / 1000000.f;
+        pTsip->dLongitude = (double) longitude / 1000000.f;
+        if (pTsip->dLongitude > 180.f)
+            pTsip->dLongitude -= 360.f;
+        pTsip->dAltitude  = (double) altitude / 100.f;
+
+        pTsip->dNorthGroundSpeedMs = northVelocity / 100.f;
+        pTsip->dEastGroundSpeedMs = eastVelocity /100.f;
+        pTsip->dGroundSpeedMs = sqrt( pTsip->dNorthGroundSpeedMs * pTsip->dNorthGroundSpeedMs + pTsip->dEastGroundSpeedMs * pTsip->dEastGroundSpeedMs );
+        pTsip->dClimbRateMs = upVelocity / 100.f;
+
+        return 0;
     }
 
     return -1;
