@@ -23,13 +23,13 @@
 #include "version.h"
 #include "m10.h"
 
-#define GNUPLOT_SEP     '\t'
-
 #define EXPECTED_BIT_RATE       48000
 #define EXPECTED_BIT_PER_SAMPLE 16
 #define SAMPLE_TO_READ      1024
 
 //#define DEBUG_OUTPUT
+
+uint8_t stop = 0;
 
 /*
  * -----------------------
@@ -91,10 +91,15 @@ void sigkillhandler(int i) // Ctrl+C or Timer
         pConfig->pKmlFile = NULL;
     }
 
-    // TODO: fix dirty...
-    exit(EXIT_SUCCESS);
-}
+    // Unregister signal
+    if (signal(SIGINT, NULL) == SIG_ERR) {
 
+      fprintf(stderr, "Failed to unregister signal");
+    }
+
+    // Stop main loop
+    stop = 1;
+}
 
 void    printHeader(void)
 {
@@ -341,7 +346,7 @@ int main(int ac, char *av[])
     m10_t       m10ctx;
     config_t    config;
     int16_t     samples[SAMPLE_TO_READ];
-    int         stop, samplesRead, opt;
+    int         samplesRead, opt;
 #ifdef ENABLE_WATCHDOG
     int         nAbortSecond, nTimeoutSecond;
 #endif
@@ -503,11 +508,34 @@ int main(int ac, char *av[])
     stop = 0;
     while (stop == 0) {
 
+        fd_set         set;
+        struct timeval timeout;
+        int            rv;
+
+        FD_ZERO(&set);
+        FD_SET(0, &set);
+        timeout.tv_sec = 1;
+        timeout.tv_usec = 0;
+
         /*
          * Read samples from stdin
          */
 
-        samplesRead = read(0, &samples, SAMPLE_TO_READ*sizeof(int16_t)) / 2;
+        rv = select(1, &set, NULL, NULL, &timeout);
+        if (rv == -1) {
+
+          perror("select()");
+          stop = 1;
+        }
+        else if (rv == 0) {
+
+          fprintf(stdout, "read() timeout\n");
+          stop = 1;
+        }
+        else {
+
+          samplesRead = read(0, &samples, SAMPLE_TO_READ*sizeof(int16_t)) / 2;
+        }
 
         if (samplesRead <= 0) {
 
