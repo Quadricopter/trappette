@@ -17,15 +17,17 @@ LDFLAGS	+= -lrt -pthread
 
 endif
 
+ifeq ($(DEBUG), y)
+CFLAGS	+= -g
+endif
+
 ##########
 
 all: $(OBJS)
 	ar rcs -o $(NAME).a $(OBJS)
 
 clean:
-	rm -rf *.o *~ \#*
-
-fclean: clean
+	rm -rf $(NAME).a *.o *~ \#*
 	rm -f $(NAME).a
 
-re:	fclean all
+re:	clean all

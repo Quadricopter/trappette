@@ -8,6 +8,10 @@ ifeq ($(shell uname -s),Linux)
 CFLAGS  += -fPIC
 endif
 
+ifeq ($(DEBUG), y)
+CFLAGS	+= -g
+endif
+
 all:	$(OBJS)
 	gcc -shared -o $(NAME).so $(OBJS)
 	ar rcs -o $(NAME).a $(OBJS)

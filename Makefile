@@ -32,6 +32,4 @@ clean:
 	rm -rf *.o *~ \#*
 	rm -f $(NAME)
 
-fclean: clean
-
 re:	clean all
