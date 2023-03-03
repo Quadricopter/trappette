@@ -334,6 +334,7 @@ int main(int ac, char *av[])
     int         samplesRead = 0;
     int         opt;
     int         nAbortSecond, nTimeoutSecond;
+    int         verboseLevel = 0;
 
     fprintf(stderr, "# Trappette v%d.%d.%d\n", TRAPPETTE_VERSION_MAJOR, TRAPPETTE_VERSION_MINOR, TRAPPETTE_VERSION_REVISION);
 
@@ -379,10 +380,10 @@ int main(int ac, char *av[])
                 }
                 break;
             case 'r':
-                    config.enableRotor = 1;
+                config.enableRotor = 1;
                 break;
             case 'v':
-                M10_setVerboseLevel(&m10ctx, 1);
+                verboseLevel++;
                 break;
             case 'a':
                 nAbortSecond = getSecondsFromParamString(optarg);
@@ -470,6 +471,7 @@ int main(int ac, char *av[])
      * Almost infinite loop
      */
 
+    M10_setVerboseLevel(&m10ctx, verboseLevel);
     M10_setTsipCallback(&m10ctx, tsip_dump_cb, (void*)&config);
 
     printHeader();
