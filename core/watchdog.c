@@ -5,10 +5,6 @@
 #include <assert.h>
 #include "watchdog.h"
 
-#ifndef ENABLE_WATCHDOG
-#pragma error "ENABLE_WATCHDOG undefined!"
-#endif
-
 #define SECONDS_IN_HOUR 3600
 
 void    sprintf_secondsToHMS(char *buff, unsigned int seconds)

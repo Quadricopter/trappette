@@ -11,11 +11,9 @@
 #include <assert.h>
 #include <math.h>
 #include <ctype.h>
+#include <sys/select.h>
 
-#ifdef ENABLE_WATCHDOG
 #include "watchdog.h"
-#endif
-
 #include "kml.h"
 #include "wgs84.h"
 #include "config.h"
@@ -30,6 +28,7 @@
 //#define DEBUG_OUTPUT
 
 uint8_t stop = 0;
+extern char *optarg;
 
 /*
  * -----------------------
@@ -38,19 +37,15 @@ uint8_t stop = 0;
 void usage(char *prgname)
 {   
     fprintf(stderr, "Usage: %s [-k kmlfile] [-n nemafile] [-gpsout] [-h] [-v]\n", prgname);
-#ifdef ENABLE_WATCHDOG
     fprintf(stderr, "                   [-a seconds] [-t seconds]\n");
-#endif
     fprintf(stderr, "                   [-q lat:lon[:alt]] [-r] [-f filter]\n");
     fprintf(stderr, " -k: specifie an .kml output file\n");
     fprintf(stderr, " -n: specifie an .nema gps output file\n");
     fprintf(stderr, " -gpsout: NEMA output on serial port\n");
     fprintf(stderr, " -h: hexadecimal dump\n");
     fprintf(stderr, " -v: verbose\n");
-#ifdef ENABLE_WATCHDOG
     fprintf(stderr, " -a: abort time ( nothing received at all )\n");
     fprintf(stderr, " -t: time out ( after last received position )\n");
-#endif
     fprintf(stderr, " -q: overwrite QRA position\n");
     fprintf(stderr, " -r: rotor output on serial port\n");
     fprintf(stderr, " -f: internal filter mode: 0 = disabled, 1 = enabled (default)\n");
@@ -59,16 +54,12 @@ void usage(char *prgname)
 void sigkillhandler(int i) // Ctrl+C or Timer
 {
     config_t    *pConfig;
-#ifdef ENABLE_WATCHDOG
     time_t      t;
     struct tm   *pTm;
-#endif
 
 //    fprintf(stderr, "%s(%d)\n", __FUNCTION__, i);
 
     pConfig = (config_t*) Config_getConfig();
-
-#ifdef ENABLE_WATCHDOG
 
     if (i == SIGALRM) {
 
@@ -81,8 +72,6 @@ void sigkillhandler(int i) // Ctrl+C or Timer
         fprintf(stderr, "\n");
         Watchdog_delete(&pConfig->watchdog);
     }
-
-#endif
 
     if (pConfig && pConfig->pKmlFile) {
 
@@ -129,15 +118,11 @@ int tsip_dump_cb(const tsip_t *tsip, void *data)
 
     assert(pConfig);
 
-#ifdef ENABLE_WATCHDOG
-
     /*
      * Kick the dog ;-)
      */
 
     Watchdog_kick(&pConfig->watchdog);
-
-#endif
 
     /*
      * Header repeat
@@ -346,16 +331,11 @@ int main(int ac, char *av[])
     m10_t       m10ctx;
     config_t    config;
     int16_t     samples[SAMPLE_TO_READ];
-    int         samplesRead, opt;
-#ifdef ENABLE_WATCHDOG
+    int         samplesRead = 0;
+    int         opt;
     int         nAbortSecond, nTimeoutSecond;
-#endif
 
-#ifndef ENABLE_WATCHDOG
     fprintf(stderr, "# Trappette v%d.%d.%d\n", TRAPPETTE_VERSION_MAJOR, TRAPPETTE_VERSION_MINOR, TRAPPETTE_VERSION_REVISION);
-#else
-    fprintf(stderr, "# Trappette v%d.%d.%d [Watchdog]\n", TRAPPETTE_VERSION_MAJOR, TRAPPETTE_VERSION_MINOR, TRAPPETTE_VERSION_REVISION);
-#endif /*ENABLE_WATCHDOG*/
 
     M10_init(&m10ctx);
 
@@ -372,21 +352,16 @@ int main(int ac, char *av[])
         }
     }
 
-#ifdef ENABLE_WATCHDOG
     Watchdog_init(&config.watchdog, sigkillhandler); 
     nAbortSecond = 0;
     nTimeoutSecond = 0;
-#endif
 
     /*
      * Check parameters
      */
 
-#ifdef ENABLE_WATCHDOG
     while ((opt = getopt(ac, av, "q:hk:n:g:vrf:a:t:")) != -1) {
-#else
-    while ((opt = getopt(ac, av, "q:hk:n:g:vrf:")) != -1) {
-#endif
+
         switch (opt) {
 
             case 'k':
@@ -409,14 +384,12 @@ int main(int ac, char *av[])
             case 'v':
                 M10_setVerboseLevel(&m10ctx, 1);
                 break;
-#ifdef ENABLE_WATCHDOG
             case 'a':
                 nAbortSecond = getSecondsFromParamString(optarg);
                 break;
             case 't':
                 nTimeoutSecond = getSecondsFromParamString(optarg);
                 break;
-#endif
             case 'q':
                 Config_overwriteQRA(&config, optarg);
                 break;
@@ -487,15 +460,11 @@ int main(int ac, char *av[])
         }
     }
 
-#ifdef ENABLE_WATCHDOG
-
     /*
      * Abort/Timeout timer
      */
 
     Watchdog_set(&config.watchdog, nAbortSecond, nTimeoutSecond);
-
-#endif
 
     /*
      * Almost infinite loop
@@ -562,10 +531,7 @@ int main(int ac, char *av[])
      * Clean...
      */
 
-#ifdef ENABLE_WATCHDOG
     Watchdog_delete(&config.watchdog);
-#endif
-
     Config_clean(&config);
 
 //    printf("Max alt: %.0fm\n", demod.dMaxAltitude);

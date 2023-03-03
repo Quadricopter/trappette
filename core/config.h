@@ -3,9 +3,7 @@
 
 #include <stdio.h>
 #include "serial.h"
-#ifdef ENABLE_WATCHDOG
- #include "watchdog.h"
-#endif
+#include "watchdog.h"
 #include "rotor.h"
 
 #define DEFAULT_CONFIG_FILE     "trappette.cfg"
@@ -54,11 +52,8 @@ typedef struct {
     int         enableRotor;
     rotor_t     rotor;
 
-#ifdef ENABLE_WATCHDOG
     /* Watchdog */
     watchdog_t  watchdog;
-#endif
-
 }   config_t;
 
 

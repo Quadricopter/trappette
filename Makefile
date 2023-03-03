@@ -1,15 +1,6 @@
-include config.mk
-
 NAME	= trappette
 CC		= gcc
-LDFLAGS	= -lm
-
-
-ifeq ($(ENABLE_WATCHDOG), y)
-
-LDFLAGS += -lrt -pthread
-
-endif
+LDFLAGS	= -lm -lrt -pthread
 
 ##########
 
