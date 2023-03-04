@@ -21,13 +21,15 @@
 #include "version.h"
 #include "m10.h"
 
-#define EXPECTED_BIT_RATE       48000
+#define EXPECTED_BIT_RATE_HZ    48000
 #define EXPECTED_BIT_PER_SAMPLE 16
-#define SAMPLE_TO_READ      1024
+#define SAMPLE_TO_READ          1024
 
-//#define DEBUG_OUTPUT
+/*
+ * Global vars
+ */
 
-uint8_t stop = 0;
+uint8_t gl_stop = 0;
 extern char *optarg;
 
 /*
@@ -57,8 +59,6 @@ void sigkillhandler(int i) // Ctrl+C or Timer
     time_t      t;
     struct tm   *pTm;
 
-//    fprintf(stderr, "%s(%d)\n", __FUNCTION__, i);
-
     pConfig = (config_t*) Config_getConfig();
 
     if (i == SIGALRM) {
@@ -87,7 +87,7 @@ void sigkillhandler(int i) // Ctrl+C or Timer
     }
 
     // Stop main loop
-    stop = 1;
+    gl_stop = 1;
 }
 
 void    printHeader(void)
@@ -333,12 +333,13 @@ int main(int ac, char *av[])
     int16_t     samples[SAMPLE_TO_READ];
     int         samplesRead = 0;
     int         opt;
-    int         nAbortSecond, nTimeoutSecond;
+    int         nWatchdogAbortSecond = 0;
+    int         nWatchdogTimeoutSecond = 0;
     int         verboseLevel = 0;
+    bool        bHexDump = false;
+    int         filterMode = -1;
 
     fprintf(stderr, "# Trappette v%d.%d.%d\n", TRAPPETTE_VERSION_MAJOR, TRAPPETTE_VERSION_MINOR, TRAPPETTE_VERSION_REVISION);
-
-    M10_init(&m10ctx);
 
     /*
      * Init, load configuration file
@@ -353,10 +354,6 @@ int main(int ac, char *av[])
         }
     }
 
-    Watchdog_init(&config.watchdog, sigkillhandler); 
-    nAbortSecond = 0;
-    nTimeoutSecond = 0;
-
     /*
      * Check parameters
      */
@@ -369,7 +366,7 @@ int main(int ac, char *av[])
                 config.szKmlFileName = strdup(optarg);
                 break;
             case 'h':
-                M10_setStreamCallback(&m10ctx, stream_dump_cb, NULL);
+                bHexDump = true;
                 break;
             case 'n':
                 config.szNmeaFileName = strdup(optarg);
@@ -386,24 +383,22 @@ int main(int ac, char *av[])
                 verboseLevel++;
                 break;
             case 'a':
-                nAbortSecond = getSecondsFromParamString(optarg);
+                nWatchdogAbortSecond = getSecondsFromParamString(optarg);
                 break;
             case 't':
-                nTimeoutSecond = getSecondsFromParamString(optarg);
+                nWatchdogTimeoutSecond = getSecondsFromParamString(optarg);
                 break;
             case 'q':
                 Config_overwriteQRA(&config, optarg);
                 break;
             case 'f':
-                M10_setFilterMode(&m10ctx, atoi(optarg));
+                filterMode = atoi(optarg);
                 break;
             default: /* '?' */
                 usage(av[0]);
                 exit(EXIT_FAILURE);
         }
     }
-
-    fprintf(stderr, "# Read %dHz/%dbits on stdin\n", EXPECTED_BIT_RATE, EXPECTED_BIT_PER_SAMPLE);
 
     /*
      * Ctrl+C handler
@@ -465,19 +460,30 @@ int main(int ac, char *av[])
      * Abort/Timeout timer
      */
 
-    Watchdog_set(&config.watchdog, nAbortSecond, nTimeoutSecond);
+    Watchdog_init(&config.watchdog, sigkillhandler); 
+    Watchdog_set(&config.watchdog, nWatchdogAbortSecond, nWatchdogTimeoutSecond);
+
+    /*
+     * Init M10 decoder
+     */
+
+    M10_init(&m10ctx);
+    M10_setVerboseLevel(&m10ctx, verboseLevel);
+    M10_setTsipCallback(&m10ctx, tsip_dump_cb, (void*)&config);
+    if (bHexDump == true)
+        M10_setStreamCallback(&m10ctx, stream_dump_cb, NULL);
+    if (filterMode != -1)
+        M10_setFilterMode(&m10ctx, filterMode);
 
     /*
      * Almost infinite loop
      */
 
-    M10_setVerboseLevel(&m10ctx, verboseLevel);
-    M10_setTsipCallback(&m10ctx, tsip_dump_cb, (void*)&config);
+    fprintf(stderr, "# Read %dHz/%dbits on stdin\n", EXPECTED_BIT_RATE_HZ, EXPECTED_BIT_PER_SAMPLE);
 
     printHeader();
 
-    stop = 0;
-    while (stop == 0) {
+    while (gl_stop == 0) {
 
         fd_set         set;
         struct timeval timeout;
@@ -496,43 +502,33 @@ int main(int ac, char *av[])
         if (rv == -1) {
 
           perror("select()");
-          stop = 1;
+          break;
         }
         else if (rv == 0) {
 
           fprintf(stdout, "read() timeout\n");
-          stop = 1;
-        }
-        else {
-
-          samplesRead = read(0, &samples, SAMPLE_TO_READ*sizeof(int16_t)) / 2;
+          break;
         }
 
+        samplesRead = read(0, &samples, SAMPLE_TO_READ*sizeof(int16_t)) / 2;
         if (samplesRead <= 0) {
 
-#ifdef DEBUG_OUTPUT
-            fprintf(stderr, "\nnothing more to read (%d)\n", samplesRead);
-#endif
-            stop = 1;
+            fprintf(stderr, "nothing more to read (%d)\n", samplesRead);
+            break;
         }
 
         /*
-         * Go!
+         * Process samples
          */
 
         M10_process16bit48k(&m10ctx, samples, samplesRead);
     }
 
     /*
-     * Flush PSK buffer
-     */
-
-    M10_release(&m10ctx);
-
-    /*
      * Clean...
      */
 
+    M10_release(&m10ctx);
     Watchdog_delete(&config.watchdog);
     Config_clean(&config);
 
