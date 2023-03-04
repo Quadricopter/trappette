@@ -73,13 +73,6 @@ void sigkillhandler(int i) // Ctrl+C or Timer
         Watchdog_delete(&pConfig->watchdog);
     }
 
-    if (pConfig && pConfig->pKmlFile) {
-
-        Kml_writeTail(pConfig->pKmlFile);
-        fclose(pConfig->pKmlFile);
-        pConfig->pKmlFile = NULL;
-    }
-
     // Unregister signal
     if (signal(SIGINT, NULL) == SIG_ERR) {
 

@@ -122,12 +122,12 @@ int     rotor_open(rotor_t *rotor)
 
 int     rotor_release(rotor_t *rotor)
 {
+    // fprintf(stderr, "rotor_release()\n");
     assert(rotor);
     serial_close(&rotor->serial);
     if (rotor->szPort)
         free((char*)rotor->szPort);
     rotor->szPort = NULL;
-fprintf(stderr, "rotor_release()\n");
 
     return 0;
 }

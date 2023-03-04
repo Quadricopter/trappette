@@ -45,7 +45,7 @@ typedef struct {
     /* NMEA Output (usart) */
     int         enableGpsOut;
     serial_t    serialGpsOut;
-    const char  *szGpsOutPort;
+    char        *szGpsOutPort;
     int         nGpsOutBaud;
 
     /* Rotor */

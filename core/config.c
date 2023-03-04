@@ -309,12 +309,20 @@ int Config_clean(config_t *pConfig)
         fclose(pConfig->pKmlFile);
         pConfig->pKmlFile = NULL;
     }
+    if (pConfig->szKmlFileName) {
+        free(pConfig->szKmlFileName);
+        pConfig->szKmlFileName = NULL;
+    }
     if (pConfig->szNmeaFileName) {
 
         free(pConfig->szNmeaFileName);
         pConfig->szNmeaFileName = NULL;
     }
-    if (pConfig->rotor.szPort && pConfig->enableRotor) {
+    if (pConfig->szGpsOutPort) {
+        free(pConfig->szGpsOutPort);
+        pConfig->szGpsOutPort = NULL;
+    }
+    if (pConfig->rotor.szPort) {
         rotor_release(&pConfig->rotor);
     }
 
