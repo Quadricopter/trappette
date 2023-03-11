@@ -25,10 +25,10 @@ void    Manchester_init(manchester_t *ctx)
     ctx->signalType = SIGNALTYPE_NOISE;
 }
 
-void    Manchester_setTsipCallback(manchester_t *ctx, int (*tsip_cb)(const tsip_t *tsip, void *data), void *data)
+void    Manchester_setDecodedCallback(manchester_t *ctx, int (*decoded_cb)(const decoded_position_t *tsip, void *data), void *data)
 {
-    ctx->tsip_cb = tsip_cb;
-    ctx->tsip_cb_data = data;
+    ctx->decoded_cb = decoded_cb;
+    ctx->decoded_cb_data = data;
 }
 
 void    Manchester_setStreamCallback(manchester_t *ctx, int (*stream_cb)(const uint8_t *stream, uint16_t size, void *data), void *data)
@@ -115,8 +115,8 @@ void    Manchester_newHalfBit(manchester_t *ctx, uint8_t bit)
                      * User callback
                      */
 
-                    if (ctx->tsip_cb)
-                        ctx->tsip_cb((const tsip_t*)&ctx->tsip, ctx->tsip_cb_data);
+                    if (ctx->decoded_cb)
+                        ctx->decoded_cb((const decoded_position_t*)&ctx->tsip, ctx->decoded_cb_data);
                 }
 
                 ctx->bufferSize = 0;

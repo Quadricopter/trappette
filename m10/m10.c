@@ -34,11 +34,11 @@ void    M10_setStreamCallback(void *ctx, int (*stream_cb)(const uint8_t *stream,
     Manchester_setStreamCallback(&m10->manchester, stream_cb, data);
 }
 
-void    M10_setTsipCallback(void *ctx, int (*tsip_cb)(const tsip_t *tsip, void *data), void *data)
+void    M10_setDecodedCallback(void *ctx, int (*tsip_cb)(const decoded_position_t *tsip, void *data), void *data)
 {
     m10_t *m10 = (m10_t*) ctx;
 
-    Manchester_setTsipCallback(&m10->manchester, tsip_cb, data);
+    Manchester_setDecodedCallback(&m10->manchester, tsip_cb, data);
 }
 
 void    M10_process16bit48k(void *ctx, int16_t *samples, uint16_t samplesRead)

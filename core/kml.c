@@ -23,14 +23,14 @@ void Kml_writeHeader(FILE *f)
     fprintf(f, "   <coordinates>\n");
 }
 
-void Kml_writeEntry(FILE *f, const tsip_t *tsip)
+void Kml_writeEntry(FILE *f, const decoded_position_t *position)
 {
     assert(f);
-    assert(tsip);
+    assert(position);
 
     // TODO: Oups, little decode bug..
-    if (tsip->dLatitude >= -90.f && tsip->dLatitude <= 90.f)
-        fprintf(f, "   %f,%f,%.0f.\n", tsip->dLongitude, tsip->dLatitude, tsip->dAltitude);
+    if (position->dLatitude >= -90.f && position->dLatitude <= 90.f)
+        fprintf(f, "   %f,%f,%.0f.\n", position->dLongitude, position->dLatitude, position->dAltitude);
 }
 
 void Kml_writeTail(FILE *f)

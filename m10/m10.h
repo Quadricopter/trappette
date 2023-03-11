@@ -2,7 +2,7 @@
 #define __M10_H__
 
 #include "manchester.h"
-#include "tsip.h"
+#include "trappette_sdk.h"
 #include "filter.h"
 
 
@@ -21,7 +21,6 @@ typedef struct  m10_s {
     q16_t       qSigLp;
     int16_t     lastSample;
     int         count;
-
 }   m10_t;
 
 /*
@@ -30,7 +29,7 @@ typedef struct  m10_s {
 
 void   *M10_init(void);
 void    M10_release(void*);
-void    M10_setTsipCallback(void*, int (*tsip_cb)(const tsip_t *tsip, void *data), void *data); 
+void    M10_setDecodedCallback(void*, int (*decoded_cb)(const decoded_position_t *tsip, void *data), void *data); 
 void    M10_setStreamCallback(void*, int (*stream_cb)(const uint8_t *stream, uint16_t size, void *data), void *data);
 void    M10_process16bit48k(void*, int16_t *samples, uint16_t count);
 void    M10_setVerboseLevel(void*, uint8_t level);

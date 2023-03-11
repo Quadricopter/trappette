@@ -17,7 +17,6 @@ libm10:
 clean:
 	(cd m10; make clean);
 	(cd core; make clean);
-	rm -rf *.o *~ \#*
-	rm -f $(NAME)
+	rm -rf $(NAME) *.so *~ \#*
 
 re:	clean all

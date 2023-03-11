@@ -98,7 +98,7 @@ void    printHeader(void)
  * -----------------------
  */
 
-int tsip_dump_cb(const tsip_t *tsip, void *data)
+int decoded_cb(const decoded_position_t *tsip, void *data)
 {
     config_t    *pConfig = (config_t*)data;
     double      azimuth, elevation, distance;
@@ -147,7 +147,7 @@ int tsip_dump_cb(const tsip_t *tsip, void *data)
                                                             tsip->dLongitude>=0.f?'E':'W',
                                                             tsip->dGroundSpeedMs * 3.6f, // To km/h
                                                             tsip->dAltitude - pConfig->dEllipsoid,
-                                                            tsip->dClimbRateMs);
+                                                            tsip->dVerticalSpeedMs);
 
     if (tsip->bIsValidChecksum == false) {
 
@@ -503,8 +503,8 @@ int main(int ac, char *av[])
         pDecoder = pLibInfo->init();
     if (pLibInfo->setVerboseLevel)
         pLibInfo->setVerboseLevel(pDecoder, verboseLevel);
-    if (pLibInfo->setTsipCallback)
-        pLibInfo->setTsipCallback(pDecoder, tsip_dump_cb, (void*)&config);
+    if (pLibInfo->setDecodedCallback)
+        pLibInfo->setDecodedCallback(pDecoder, decoded_cb, (void*)&config);
     if ((bHexDump == true) && (pLibInfo->setStreamCallback))
         pLibInfo->setStreamCallback(pDecoder, stream_dump_cb, NULL);
     if ((filterMode != -1) && (pLibInfo->enableFilter))
