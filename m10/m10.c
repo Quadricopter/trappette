@@ -13,7 +13,6 @@ void    M10_init(m10_t *ctx)
     memset(ctx, 0, sizeof(m10_t));
 
     Manchester_init(&ctx->manchester);
-    sync_init(&ctx->syncctx);
     ctx->filterMode = FILTER_ENABLED;
 }
 
@@ -53,38 +52,31 @@ void    M10_process16bit48k(m10_t *ctx, int16_t *samples, uint16_t samplesRead)
         }
 
         /*
-         * Zero crossing - Clock synchronization
+         * Zero-crossing - Clock synchronization
+         * 4800 baud @ 48kHz -> 10 samples/bit
+         *                   ->  5 samples/half_bit
+         * 
+         *                        ----      ----           ---- ----           ----      ----
+         *   Zero    |||||||||||||    |    |    |         |         |         |    |    |    ||||||||||||||
+         * Crossing  |||||||||||||    |    |    |         |         |         |    |    |    ||||||||||||||
+         *                             ----      ---- ----           ---- ----      ----
+         * Sampling:     NOISE     X    X    X    X    X    X    X    X    X    X    X    X      NOISE
+         *                          \    \    \    \    \    \    \    \    \    \    \    \
+         *                           ZC+2 ZC+2 ZC+2 ZC+2 \    ZC+2 \    ZC+2 \    ZC+2 ZC+2 ZC+2 
+         *                                                ZC+7      ZC+7      ZC+7
          */
 
-        if (newSample >= 0 && ctx->lastSample < 0) {
+        if ((newSample >= 0 && ctx->lastSample < 0) ||
+            (newSample < 0 && ctx->lastSample >= 0)) {
 
-            sync_update(&ctx->syncctx, 0, ctx->count);
+            /* Zero-crossing: reset counter */
             ctx->count = 0;
         }
+        else if (ctx->count == 2 || ctx->count == 7) {
 
-        if (newSample < 0 && ctx->lastSample >= 0) {
-
-            sync_update(&ctx->syncctx, 1, ctx->count);
-            ctx->count = 0;
-        }
-
-        /*
-         * PSK Demodulation
-         */
-
-        if (sync_getState(&ctx->syncctx) == SYNCSTAT_SYNCHRONIZED) {
-
-            if (ctx->count == 2 || ctx->count == 7) {
-
-                if (newSample > 0) {
-
-                    Manchester_newHalfBit(&ctx->manchester, 1);
-                }
-                else {
-
-                    Manchester_newHalfBit(&ctx->manchester, 0);
-                }
-            }
+            /* 2 or 7 samples after zero-crossing */
+            Manchester_newHalfBit(&ctx->manchester,
+                                  newSample > 0 ? 1 : 0);
         }
 
         ctx->lastSample = newSample;

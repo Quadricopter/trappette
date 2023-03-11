@@ -1,7 +1,6 @@
 #ifndef __M10_H__
 #define __M10_H__
 
-#include "sync.h"
 #include "manchester.h"
 #include "tsip.h"
 #include "filter.h"
@@ -18,7 +17,6 @@ typedef enum {
 typedef struct  m10_s {
 
     /* */
-    sync_t      syncctx;
     manchester_t    manchester;
 
     /* */

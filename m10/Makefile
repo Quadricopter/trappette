@@ -1,4 +1,4 @@
-SRCS	= filter.c m10.c manchester.c sync.c tsip.c checksum.c endian_util.c
+SRCS	= filter.c m10.c manchester.c tsip.c checksum.c endian_util.c
 OBJS	= $(SRCS:.c=.o)
 CFLAGS	= -Wall
 NAME	= libm10
