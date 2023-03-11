@@ -17,10 +17,9 @@ typedef struct  {
     double      dLongitude;
     double      dAltitude;
 
-    double      dNorthGroundSpeedMs;
-    double      dEastGroundSpeedMs;
     double      dGroundSpeedMs;
     double      dVerticalSpeedMs;
+    double      dTrueCourse;
 
     bool        bIsValidChecksum;
 }   decoded_position_t; 

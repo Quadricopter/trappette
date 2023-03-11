@@ -64,33 +64,32 @@ uint8_t gps_computeNemaChecksum(const char *nmea)
     return checksum;
 }
 
-int gps_tsipToNmeaFormat(char *gpgga, char *gprmc, const decoded_position_t *pPositon, double dGeoid)
+int gps_tsipToNmeaFormat(char *gpgga, char *gprmc, const decoded_position_t *pPosition, double dGeoid)
 {
     int degLat, minLat, decLat;
     int degLon, minLon, decLon;
-    double  dTrueCourse;
     char chkBuff[8];
     uint8_t checksum;
     struct  tm *ptm;
 
-    if (!pPositon)
+    if (!pPosition)
         return -1;
 
-    gps_degToDegMin(&degLat, &minLat, &decLat, pPositon->dLatitude);
-    gps_degToDegMin(&degLon, &minLon, &decLon, pPositon->dLongitude);
-//    printf("%f%c %f%c  ->  ", pPositon->dLatitude, pPositon->dLatitude>0.f?'N':'S', pPositon->dLongitude, pPositon->dLongitude>0.f?'E':'O');
-//    printf("%02d°%02d.%04d%c %03d°%02d.%04d%c\n",   degLat, minLat, decLat, pPositon->dLatitude>0.f?'N':'S',
-//                                                    degLon, minLon, decLon, pPositon->dLongitude>0.f?'E':'W');
+    gps_degToDegMin(&degLat, &minLat, &decLat, pPosition->dLatitude);
+    gps_degToDegMin(&degLon, &minLon, &decLon, pPosition->dLongitude);
+//    printf("%f%c %f%c  ->  ", pPosition->dLatitude, pPosition->dLatitude>0.f?'N':'S', pPosition->dLongitude, pPosition->dLongitude>0.f?'E':'O');
+//    printf("%02d°%02d.%04d%c %03d°%02d.%04d%c\n",   degLat, minLat, decLat, pPosition->dLatitude>0.f?'N':'S',
+//                                                    degLon, minLon, decLon, pPosition->dLongitude>0.f?'E':'W');
 
-    ptm = gmtime(&pPositon->unixEpoch);
+    ptm = gmtime(&pPosition->unixEpoch);
 
     if (gpgga) {
 
         sprintf(gpgga, "$GPGGA,%02d%02d%02d.000,%02d%02d.%04d,%c,%03d%02d.%04d,%c,1,4,3.2,%.1f,M,%.1f,M,,",
                     ptm->tm_hour, ptm->tm_min, ptm->tm_sec,
-                    degLat, minLat, decLat, pPositon->dLatitude>0.f?'N':'S',
-                    degLon, minLon, decLon, pPositon->dLongitude>0.f?'E':'W',
-                    pPositon->dAltitude-dGeoid, dGeoid);
+                    degLat, minLat, decLat, pPosition->dLatitude>0.f?'N':'S',
+                    degLon, minLon, decLon, pPosition->dLongitude>0.f?'E':'W',
+                    pPosition->dAltitude-dGeoid, dGeoid);
         checksum = gps_computeNemaChecksum(gpgga);
         sprintf(chkBuff, "*%02X%s", checksum, NMEA_EOL);
         strcat(gpgga, chkBuff);
@@ -109,18 +108,12 @@ int gps_tsipToNmeaFormat(char *gpgga, char *gprmc, const decoded_position_t *pPo
          * Compute course from North and East velicity
          */
 
-        dTrueCourse = 0.f;
-//        fprintf(stderr, "NorthVel: %f, EastVel: %f\n", pPositon->dNorthGroundSpeedMs, pPositon->dEastGroundSpeedMs);
-        dTrueCourse = radToDeg( atan2(pPositon->dEastGroundSpeedMs, pPositon->dNorthGroundSpeedMs) );
-        while (dTrueCourse < 0.f)
-            dTrueCourse += 360.f;
-
         sprintf(gprmc, "$GPRMC,%02d%02d%02d.000,A,%02d%02d.%04d,%c,%03d%02d.%04d,%c,%.1f,%.1f,%02d%02d%02d,,,A",
                     ptm->tm_hour, ptm->tm_min, ptm->tm_sec,
-                    degLat, minLat, decLat, pPositon->dLatitude>0.f?'N':'S',
-                    degLon, minLon, decLon, pPositon->dLongitude>0.f?'E':'W',
-                    pPositon->dGroundSpeedMs/0.5144444f,   // m/s to knots
-                    dTrueCourse,
+                    degLat, minLat, decLat, pPosition->dLatitude>0.f?'N':'S',
+                    degLon, minLon, decLon, pPosition->dLongitude>0.f?'E':'W',
+                    pPosition->dGroundSpeedMs/0.5144444f,   // m/s to knots
+                    pPosition->dTrueCourse,
                     ptm->tm_mday, ptm->tm_mon+1, ptm->tm_year );
         checksum = gps_computeNemaChecksum(gprmc);
         sprintf(chkBuff, "*%02X%s", checksum, NMEA_EOL);

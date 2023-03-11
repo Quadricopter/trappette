@@ -7,6 +7,6 @@
  *
  */
 
-int gps_tsipToNmeaFormat(char *gpgga, char *gprmc, const decoded_position_t *pPositon, double dGeoid);
+int gps_tsipToNmeaFormat(char *gpgga, char *gprmc, const decoded_position_t *pPosition, double dGeoid);
 
 #endif /*__GPS_H__*/

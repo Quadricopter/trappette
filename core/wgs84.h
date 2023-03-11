@@ -26,7 +26,6 @@ typedef struct  {
  */
 
 int     wgs84_setCoordinate(wgs84_t *dst, double dLat, double dLong, double dAlt);
-//double wgs84_computeHeadingAndDistance(const wgs84_t *localPos, const wgs84_t *remotePos);
 double  wgs84_computeHeadingAndDistance(const wgs84_t *localPos, const wgs84_t *remotePos, double *dHeading, double *dDistance);
 
 double  degToRad(double deg);
