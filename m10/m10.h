@@ -5,11 +5,7 @@
 #include "tsip.h"
 #include "filter.h"
 
-typedef enum {
 
-    FILTER_DISABLED = 0,
-    FILTER_ENABLED
-} FilterMode_t;
 /*
  *
  */
@@ -20,10 +16,7 @@ typedef struct  m10_s {
     manchester_t    manchester;
 
     /* */
-    void        *streamCbData;
-    
-    /* */
-    FilterMode_t    filterMode;
+    bool        bEnableFilter;
     q16_t       qDcLp;
     q16_t       qSigLp;
     int16_t     lastSample;
@@ -35,12 +28,12 @@ typedef struct  m10_s {
  *
  */
 
-void    M10_init(m10_t *ctx);
-void    M10_release(m10_t *ctx);
-void    M10_setTsipCallback(m10_t *ctx, int (*tsip_cb)(const tsip_t *tsip, void *data), void *data); 
-void    M10_setStreamCallback(m10_t *ctx, int (*stream_cb)(const uint8_t *stream, uint16_t size, void *data), void *data);
-void    M10_process16bit48k(m10_t *ctx, int16_t *samples, uint16_t count);
-void    M10_setVerboseLevel(m10_t *ctx, uint8_t level);
-void    M10_setFilterMode(m10_t *ctx, FilterMode_t filterMode);
+void   *M10_init(void);
+void    M10_release(void*);
+void    M10_setTsipCallback(void*, int (*tsip_cb)(const tsip_t *tsip, void *data), void *data); 
+void    M10_setStreamCallback(void*, int (*stream_cb)(const uint8_t *stream, uint16_t size, void *data), void *data);
+void    M10_process16bit48k(void*, int16_t *samples, uint16_t count);
+void    M10_setVerboseLevel(void*, uint8_t level);
+void    M10_enableFilter(void*, bool bEnable);
 
 #endif /*__M10_H__*/

@@ -37,6 +37,20 @@ void    Manchester_setStreamCallback(manchester_t *ctx, int (*stream_cb)(const u
     ctx->stream_cb_data = data;
 }
 
+/*
+ * Inverted Differential Manchester decoding
+ * - Same pattern      = 1
+ * - Pattern inversion = 0
+ *    _______   _______   _______   _______   _______   _______
+ *   /   X   \ /   1   \ /   0   \ /   0   \ /   0   \ /   1   \
+ *   ----      ----           ---- ----           ----      ----
+ *       |    |    |         |         |         |    |    |
+ *       |    |    |         |         |         |    |    |
+ *        ----      ---- ----           ---- ----      ----
+ *        HALF
+ *        BIT
+ */
+
 void    Manchester_newHalfBit(manchester_t *ctx, uint8_t bit)
 {
     if (ctx->verboseLevel > 0)

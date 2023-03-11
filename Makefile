@@ -1,13 +1,10 @@
 NAME	= trappette
 CC		= gcc
-LDFLAGS	= -lm -lrt -pthread
+LDFLAGS	= -lm -lrt -pthread -ldl
 
 ##########
 
-all: libm10 libcore bin
-
-bin:
-	$(CC) -o $(NAME) core/core.a m10/libm10.a $(LDFLAGS)
+all: libm10 libcore
 
 libcore:
 	echo "### Building core ###"; \

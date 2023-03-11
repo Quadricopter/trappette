@@ -1,11 +1,12 @@
 SRCS	= main.c kml.c wgs84.c rotor.c config.c reader.c wordtab.c gps.c serial_unix.c watchdog.c
 OBJS	= $(SRCS:.c=.o)
-INC		= -I../m10
+INC		= -I../sdk
+INC	   += -I../m10  # TODO: Move tsip struct in sdk/
 CFLAGS	= -Wall $(INC)
-NAME	= core
+NAME	= trappette
 CC		= gcc
 
-LDFLAGS	+= -lrt -pthread  # Watchdog
+LDFLAGS	+= -lm -ldl -lrt -pthread
 
 ifeq ($(DEBUG), y)
 CFLAGS	+= -g
@@ -14,10 +15,9 @@ endif
 ##########
 
 all: $(OBJS)
-	ar rcs -o $(NAME).a $(OBJS)
+	$(CC) -o ../$(NAME) $(OBJS) $(LDFLAGS)
 
 clean:
-	rm -rf $(NAME).a *.o *~ \#*
-	rm -f $(NAME).a
+	rm -rf $(NAME) *.o *~ \#*
 
 re:	clean all
