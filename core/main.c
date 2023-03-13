@@ -12,6 +12,7 @@
 #include <math.h>
 #include <ctype.h>
 #include <sys/select.h>
+#include <dlfcn.h>
 
 #include "watchdog.h"
 #include "kml.h"
@@ -19,11 +20,14 @@
 #include "config.h"
 #include "gps.h"
 #include "version.h"
-#include "m10.h"
+
+#include "trappette_sdk.h"
 
 #define EXPECTED_BIT_RATE_HZ    48000
 #define EXPECTED_BIT_PER_SAMPLE 16
 #define SAMPLE_TO_READ          1024
+
+#define DECODER_LIBRARY         "libm10.so"
 
 /*
  * Global vars
@@ -94,7 +98,7 @@ void    printHeader(void)
  * -----------------------
  */
 
-int tsip_dump_cb(const tsip_t *tsip, void *data)
+int decoded_cb(const decoded_position_t *tsip, void *data)
 {
     config_t    *pConfig = (config_t*)data;
     double      azimuth, elevation, distance;
@@ -143,7 +147,7 @@ int tsip_dump_cb(const tsip_t *tsip, void *data)
                                                             tsip->dLongitude>=0.f?'E':'W',
                                                             tsip->dGroundSpeedMs * 3.6f, // To km/h
                                                             tsip->dAltitude - pConfig->dEllipsoid,
-                                                            tsip->dClimbRateMs);
+                                                            tsip->dVerticalSpeedMs);
 
     if (tsip->bIsValidChecksum == false) {
 
@@ -321,7 +325,10 @@ unsigned int    getSecondsFromParamString(const char *szString)
 
 int main(int ac, char *av[])
 {
-    m10_t       m10ctx;
+    void            *handle = NULL;
+    trappette_lib_t *(*get_lib_info)(void) = NULL;
+    trappette_lib_t *pLibInfo = NULL;
+    void        *pDecoder = NULL;
     config_t    config;
     int16_t     samples[SAMPLE_TO_READ];
     int         samplesRead = 0;
@@ -457,16 +464,51 @@ int main(int ac, char *av[])
     Watchdog_set(&config.watchdog, nWatchdogAbortSecond, nWatchdogTimeoutSecond);
 
     /*
-     * Init M10 decoder
+     * Load decoder
      */
 
-    M10_init(&m10ctx);
-    M10_setVerboseLevel(&m10ctx, verboseLevel);
-    M10_setTsipCallback(&m10ctx, tsip_dump_cb, (void*)&config);
-    if (bHexDump == true)
-        M10_setStreamCallback(&m10ctx, stream_dump_cb, NULL);
-    if (filterMode != -1)
-        M10_setFilterMode(&m10ctx, filterMode);
+    // Load library
+    handle = dlopen("./" DECODER_LIBRARY, RTLD_LAZY);
+    if (!handle) {
+        fprintf(stderr, "Error: Can't open %s\n", DECODER_LIBRARY);
+        goto clean;
+    }
+
+    // Search library info
+    get_lib_info = dlsym(handle, "get_lib_info");
+    if (!get_lib_info) {
+        fprintf(stderr, "Error:%s: get_lib_info() not found\n", DECODER_LIBRARY);
+        goto close;
+    }
+    pLibInfo = get_lib_info();
+    if (!pLibInfo) {
+        fprintf(stderr, "Error: %s: get_lib_info() returns NULL\n", DECODER_LIBRARY);
+        goto close;
+    }
+    fprintf(stderr, "[%s] Loaded: %s\n", pLibInfo->szLibName,
+                                         pLibInfo->szLibInfo);
+
+    // Check library min requirement 
+    if (!pLibInfo->process16bit48k) {
+        fprintf(stderr, "Error: %s trappette_lib_t doesn't have process16bit48k()\n", DECODER_LIBRARY);
+        goto close;
+    }
+
+    /*
+     * Init decoder
+     */
+
+    pDecoder = NULL;
+    if (pLibInfo->init)
+        pDecoder = pLibInfo->init();
+    if (pLibInfo->setVerboseLevel)
+        pLibInfo->setVerboseLevel(pDecoder, verboseLevel);
+    if (pLibInfo->setDecodedCallback)
+        pLibInfo->setDecodedCallback(pDecoder, decoded_cb, (void*)&config);
+    if ((bHexDump == true) && (pLibInfo->setStreamCallback))
+        pLibInfo->setStreamCallback(pDecoder, stream_dump_cb, NULL);
+    if ((filterMode != -1) && (pLibInfo->enableFilter))
+        pLibInfo->enableFilter(pDecoder, (bool) filterMode);
 
     /*
      * Almost infinite loop
@@ -514,14 +556,20 @@ int main(int ac, char *av[])
          * Process samples
          */
 
-        M10_process16bit48k(&m10ctx, samples, samplesRead);
+        pLibInfo->process16bit48k(pDecoder, samples, samplesRead);
     }
 
     /*
      * Clean...
      */
 
-    M10_release(&m10ctx);
+    if (pLibInfo->release)
+        pLibInfo->release(pDecoder);
+    pDecoder = NULL;
+close:
+    dlclose(handle);
+
+clean:
     Watchdog_delete(&config.watchdog);
     Config_clean(&config);
 

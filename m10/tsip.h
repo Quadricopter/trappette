@@ -2,8 +2,7 @@
 #define __TSIP_H__
 
 #include <stdint.h>
-#include <stdbool.h>
-#include <time.h>
+#include "trappette_sdk.h"
 
 #define TSIP_PACKET_SIZE    101
 
@@ -11,28 +10,6 @@
  *
  */
 
-typedef struct  {
-
-    time_t      unixEpoch;
-
-    double      dLatitude;
-    double      dLongitude;
-    double      dAltitude;
-
-    double      dNorthGroundSpeedMs;
-    double      dEastGroundSpeedMs;
-    double      dGroundSpeedMs;
-    double      dClimbRateMs;
-
-    bool        bIsValidChecksum;
-}   tsip_t; 
-
-/*
- *
- */
-
-int TSIP_stream2Struct(tsip_t *pTsip, const uint8_t *pStream, uint8_t size);
-int TSIP_getTime(uint8_t *hour, uint8_t *min, uint8_t *sec, const tsip_t *pTsip);
-void    TSIP_timeToString(char *dst, uint32_t seconds);
+int TSIP_stream2Struct(decoded_position_t *, const uint8_t *pStream, uint8_t size);
 
 #endif /*__TSIP_H__*/

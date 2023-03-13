@@ -2,14 +2,14 @@
 #define __KML_H__
 
 #include <stdio.h>
-#include "tsip.h"
+#include "trappette_sdk.h"
 
 /*
  *
  */
 
 void Kml_writeHeader(FILE *f);
-void Kml_writeEntry(FILE *f, const tsip_t *tsip);
+void Kml_writeEntry(FILE *f, const decoded_position_t *position);
 void Kml_writeTail(FILE *f);
 
 

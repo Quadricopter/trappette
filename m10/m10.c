@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <string.h>
 #include "m10.h"
 
@@ -8,32 +9,43 @@
  *
  */
 
-void    M10_init(m10_t *ctx)
+void    *M10_init(void)
 {
+    m10_t *ctx = NULL;
+
+    ctx = malloc(sizeof(m10_t));
     memset(ctx, 0, sizeof(m10_t));
 
     Manchester_init(&ctx->manchester);
-    ctx->filterMode = FILTER_ENABLED;
+    ctx->bEnableFilter = true;
+
+    return ctx;
 }
 
-void    M10_release(m10_t *ctx)
+void    M10_release(void *ctx)
 {
+    free(ctx);
 }
 
-void    M10_setStreamCallback(m10_t *ctx, int (*stream_cb)(const uint8_t *stream, uint16_t size, void *data), void *data)
+void    M10_setStreamCallback(void *ctx, int (*stream_cb)(const uint8_t *stream, uint16_t size, void *data), void *data)
 {
-    Manchester_setStreamCallback(&ctx->manchester, stream_cb, data);
+    m10_t *m10 = (m10_t*) ctx;
+
+    Manchester_setStreamCallback(&m10->manchester, stream_cb, data);
 }
 
-void    M10_setTsipCallback(m10_t *ctx, int (*tsip_cb)(const tsip_t *tsip, void *data), void *data)
+void    M10_setDecodedCallback(void *ctx, int (*tsip_cb)(const decoded_position_t *tsip, void *data), void *data)
 {
-    Manchester_setTsipCallback(&ctx->manchester, tsip_cb, data);
+    m10_t *m10 = (m10_t*) ctx;
+
+    Manchester_setDecodedCallback(&m10->manchester, tsip_cb, data);
 }
 
-void    M10_process16bit48k(m10_t *ctx, int16_t *samples, uint16_t samplesRead)
+void    M10_process16bit48k(void *ctx, int16_t *samples, uint16_t samplesRead)
 {
     int16_t rawSample, newSample;
     int     m;
+    m10_t   *m10 = (m10_t*) ctx;
 
     for (m = 0; m < samplesRead; m++) {
 
@@ -44,11 +56,11 @@ void    M10_process16bit48k(m10_t *ctx, int16_t *samples, uint16_t samplesRead)
         rawSample = samples[m];
         newSample = rawSample;
 
-        if (ctx->filterMode != FILTER_DISABLED) {
+        if (m10->bEnableFilter) {
 
-            low_pass_filter_q16(SIGNAL_LOW_PASS, &ctx->qSigLp, rawSample<<16);
-            low_pass_filter_q16(DC_CUT_LOW_PASS, &ctx->qDcLp,  rawSample<<16);
-            newSample = (ctx->qSigLp - ctx->qDcLp)>>16;       // Remove DC + Lowpass 
+            low_pass_filter_q16(SIGNAL_LOW_PASS, &m10->qSigLp, rawSample<<16);
+            low_pass_filter_q16(DC_CUT_LOW_PASS, &m10->qDcLp,  rawSample<<16);
+            newSample = (m10->qSigLp - m10->qDcLp)>>16;       // Remove DC + Lowpass 
         }
 
         /*
@@ -66,30 +78,34 @@ void    M10_process16bit48k(m10_t *ctx, int16_t *samples, uint16_t samplesRead)
          *                                                ZC+7      ZC+7      ZC+7
          */
 
-        if ((newSample >= 0 && ctx->lastSample < 0) ||
-            (newSample < 0 && ctx->lastSample >= 0)) {
+        if ((newSample >= 0 && m10->lastSample < 0) ||
+            (newSample < 0 && m10->lastSample >= 0)) {
 
             /* Zero-crossing: reset counter */
-            ctx->count = 0;
+            m10->count = 0;
         }
-        else if (ctx->count == 2 || ctx->count == 7) {
+        else if (m10->count == 2 || m10->count == 7) {
 
             /* 2 or 7 samples after zero-crossing */
-            Manchester_newHalfBit(&ctx->manchester,
+            Manchester_newHalfBit(&m10->manchester,
                                   newSample > 0 ? 1 : 0);
         }
 
-        ctx->lastSample = newSample;
-        ctx->count++;
+        m10->lastSample = newSample;
+        m10->count++;
     }
 }
 
-void    M10_setVerboseLevel(m10_t *ctx, uint8_t level)
+void    M10_setVerboseLevel(void *ctx, uint8_t level)
 {
-    ctx->manchester.verboseLevel = level;
+    m10_t *m10 = (m10_t*) ctx;
+
+    m10->manchester.verboseLevel = level;
 }
 
-void    M10_setFilterMode(m10_t *ctx, FilterMode_t filterMode)
+void    M10_enableFilter(void *ctx, bool bEnableFilter)
 {
-    ctx->filterMode = filterMode;
+    m10_t *m10 = (m10_t*) ctx;
+
+    m10->bEnableFilter = bEnableFilter;
 }

@@ -74,7 +74,7 @@ time_t  TSIP_generateTimestamp_AF(uint32_t time24, uint32_t date24)
  * Fill TSIP strcut from 0x8F-20 string
  */
 
-int TSIP_stream2Struct(tsip_t *pTsip, const uint8_t *pStream, uint8_t size)
+int TSIP_stream2Struct(decoded_position_t *pPosition, const uint8_t *pStream, uint8_t size)
 {
     const uint8_t *pSuperPacket = NULL;
     uint32_t    time_ms;
@@ -85,17 +85,19 @@ int TSIP_stream2Struct(tsip_t *pTsip, const uint8_t *pStream, uint8_t size)
     int32_t     altitude;
     double      dScale;
     int16_t     northVelocity, eastVelocity, upVelocity;
+    double      dNorthGroundSpeedMs;
+    double      dEastGroundSpeedMs;
 
-    if (!pTsip || !pStream || (size != TSIP_PACKET_SIZE))
+    if (!pPosition || !pStream || (size != TSIP_PACKET_SIZE))
         return -1;
 
-    memset(pTsip, 0, sizeof(tsip_t));
+    memset(pPosition, 0, sizeof(decoded_position_t));
 
     /*
      * Compute Checksum
      */
 
-    pTsip->bIsValidChecksum = isValidM10Checksum(pStream, size);
+    pPosition->bIsValidChecksum = isValidM10Checksum(pStream, size);
 
     /*
      * M10 - Copernicus
@@ -129,21 +131,25 @@ int TSIP_stream2Struct(tsip_t *pTsip, const uint8_t *pStream, uint8_t size)
          * Fill destination struct, The seconds count begins at the midnight which begins each Sunday morning
          */
 
-        pTsip->unixEpoch = TSIP_generateTimestamp_9F(time_ms/1000-utcOffset + 1, week);  // p59/254
+        pPosition->unixEpoch = TSIP_generateTimestamp_9F(time_ms/1000-utcOffset + 1, week);  // p59/254
 
-        pTsip->dLatitude  = (double) latitude * SEMI_2_DEG;
-        pTsip->dLongitude = (double) longitude * SEMI_2_DEG;
-        if (pTsip->dLongitude > 180.f)
-            pTsip->dLongitude -= 360.f;
-        pTsip->dAltitude  = (double) altitude / 1000.f;
+        pPosition->dLatitude  = (double) latitude * SEMI_2_DEG;
+        pPosition->dLongitude = (double) longitude * SEMI_2_DEG;
+        if (pPosition->dLongitude > 180.f)
+            pPosition->dLongitude -= 360.f;
+        pPosition->dAltitude  = (double) altitude / 1000.f;
 
-        pTsip->dNorthGroundSpeedMs = northVelocity;
-        pTsip->dNorthGroundSpeedMs *= dScale;
-        pTsip->dEastGroundSpeedMs = eastVelocity;
-        pTsip->dEastGroundSpeedMs *= dScale;
-        pTsip->dGroundSpeedMs = sqrt( pTsip->dNorthGroundSpeedMs * pTsip->dNorthGroundSpeedMs + pTsip->dEastGroundSpeedMs * pTsip->dEastGroundSpeedMs );
-        pTsip->dClimbRateMs = upVelocity;
-        pTsip->dClimbRateMs *= dScale;
+        dNorthGroundSpeedMs = northVelocity;
+        dNorthGroundSpeedMs *= dScale;
+        dEastGroundSpeedMs = eastVelocity;
+        dEastGroundSpeedMs *= dScale;
+        pPosition->dGroundSpeedMs = sqrt( dNorthGroundSpeedMs * dNorthGroundSpeedMs + dEastGroundSpeedMs * dEastGroundSpeedMs );
+        pPosition->dVerticalSpeedMs = upVelocity;
+        pPosition->dVerticalSpeedMs *= dScale;
+
+        pPosition->dTrueCourse = ( atan2(dEastGroundSpeedMs, dNorthGroundSpeedMs) * 180.f ) / M_PI;
+        while (pPosition->dTrueCourse < 0.f)
+            pPosition->dTrueCourse += 360.f;
 
         return 0;
     }
@@ -184,18 +190,22 @@ int TSIP_stream2Struct(tsip_t *pTsip, const uint8_t *pStream, uint8_t size)
          * Fill destinatino struct
          */
 
-        pTsip->unixEpoch = TSIP_generateTimestamp_AF(t, d);
+        pPosition->unixEpoch = TSIP_generateTimestamp_AF(t, d);
 
-        pTsip->dLatitude  = (double) latitude / 1000000.f;
-        pTsip->dLongitude = (double) longitude / 1000000.f;
-        if (pTsip->dLongitude > 180.f)
-            pTsip->dLongitude -= 360.f;
-        pTsip->dAltitude  = (double) altitude / 100.f;
+        pPosition->dLatitude  = (double) latitude / 1000000.f;
+        pPosition->dLongitude = (double) longitude / 1000000.f;
+        if (pPosition->dLongitude > 180.f)
+            pPosition->dLongitude -= 360.f;
+        pPosition->dAltitude  = (double) altitude / 100.f;
 
-        pTsip->dNorthGroundSpeedMs = northVelocity / 100.f;
-        pTsip->dEastGroundSpeedMs = eastVelocity /100.f;
-        pTsip->dGroundSpeedMs = sqrt( pTsip->dNorthGroundSpeedMs * pTsip->dNorthGroundSpeedMs + pTsip->dEastGroundSpeedMs * pTsip->dEastGroundSpeedMs );
-        pTsip->dClimbRateMs = upVelocity / 100.f;
+        dNorthGroundSpeedMs = northVelocity / 100.f;
+        dEastGroundSpeedMs = eastVelocity /100.f;
+        pPosition->dGroundSpeedMs = sqrt( dNorthGroundSpeedMs * dNorthGroundSpeedMs + dEastGroundSpeedMs * dEastGroundSpeedMs );
+        pPosition->dVerticalSpeedMs = upVelocity / 100.f;
+
+        pPosition->dTrueCourse = ( atan2(dEastGroundSpeedMs, dNorthGroundSpeedMs) * 180.f ) / M_PI;
+        while (pPosition->dTrueCourse < 0.f)
+            pPosition->dTrueCourse += 360.f;
 
         return 0;
     }

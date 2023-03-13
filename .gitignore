@@ -1,5 +1,6 @@
 trappette
 trappette.exe
+*.so
 samples/*
 doc/*
 kml/*
@@ -13,7 +14,6 @@ batch.pl
 *.sh
 .trappette.cfg
 trappette.cfg
-m10/libm10*
 core/core*
 *.nmea
 .vscode
