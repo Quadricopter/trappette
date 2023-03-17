@@ -66,10 +66,12 @@ void sigkillhandler(int i) // Ctrl+C or Timer
     if (i == SIGALRM) {
 
         time(&t);
-        t += pConfig->timeOffset;
-        pTm = gmtime(&t);
+        if (pConfig->bShowUTC)
+            pTm = gmtime(&t);
+        else
+            pTm = localtime(&t);
         fprintf(stderr, "# Watchdog [%02d:%02d:%02d]", pTm->tm_hour, pTm->tm_min, pTm->tm_sec);
-        if (pConfig->timeOffset == 0)
+        if (pConfig->bShowUTC)
             fprintf(stderr, " UTC");
         fprintf(stderr, "\n");
         Watchdog_delete(&pConfig->watchdog);
@@ -99,12 +101,13 @@ void    printHeader(void)
 int decoded_cb(const decoded_position_t *tsip, void *data)
 {
     config_t    *pConfig = (config_t*)data;
-    double      azimuth, elevation, distance;
+    double      azimuth = 0.f;
+    double      elevation = 0.f;
+    double      distance = 0.f;
     wgs84_t     myPos, tsipPos;
     char        gga[128];
     char        rmc[128];
     FILE        *nmeaFILE;
-    time_t      myLocalEpoch;
     char        myLocaTimeString[32];
     struct tm   *ptm;
     static  int idx = 0;
@@ -134,11 +137,14 @@ int decoded_cb(const decoded_position_t *tsip, void *data)
      * Console dump
      */
 
-    myLocalEpoch = tsip->unixEpoch + pConfig->timeOffset;
-    ptm = gmtime(&myLocalEpoch);
+    if (pConfig->bShowUTC)
+        ptm = gmtime(&tsip->unixEpoch);
+    else
+        ptm = localtime(&tsip->unixEpoch);
     sprintf(myLocaTimeString, "%02d:%02d:%02d", ptm->tm_hour, ptm->tm_min, ptm->tm_sec);
 
-    printf("[%s] %8.5f%c %9.5f%c %5.1fkm/h %5.0fm % 6.2fm/s",   myLocaTimeString,
+    printf("%s%c %9.5f%c %9.5f%c %5.1fkm/h %5.0fm % 6.2fm/s", myLocaTimeString,
+                                                            pConfig->bShowUTC == true ? 'Z' : ' ',
                                                             tsip->dLatitude>=0.f?tsip->dLatitude:-tsip->dLatitude,
                                                             tsip->dLatitude>=0.f?'N':'S',
                                                             tsip->dLongitude>=0.f?tsip->dLongitude:-tsip->dLongitude,
@@ -286,17 +292,11 @@ int stream_dump_cb(const uint8_t *stream, uint16_t size, void *data)
 unsigned int    getSecondsFromParamString(const char *szString)
 {
     unsigned int    seconds;
-    char    str[32];
-    int n, mul;
+    char            str[32];
+    int             n, mul;
 
-    strncpy(str, szString, 32);
+    memcpy(str, szString, strnlen(szString, 32) + 1);
     for (seconds = 0, n = 0, mul = 1; n < (int) strlen(str); n++) {
-
-/*        if (str[n] == ' ') {
-
-            str[n] = 0;
-            break;
-        } */
 
         if (isalpha(str[n])) {
 
