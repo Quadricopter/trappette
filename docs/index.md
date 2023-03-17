@@ -107,7 +107,7 @@ Avec votre éditeur favori, examinez alors les paramètres et modifiez ceux qui 
 	qra.altitude  = 334
 	
 	# Output
-	time.offset = 3600
+	time.utc = 0
 	earth.ellipsoid = 49
 	#header.repeat = 22
 	
