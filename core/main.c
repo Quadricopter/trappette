@@ -21,13 +21,12 @@
 #include "gps.h"
 #include "version.h"
 
+#include "decoder.h"
 #include "trappette_sdk.h"
 
 #define EXPECTED_BIT_RATE_HZ    48000
 #define EXPECTED_BIT_PER_SAMPLE 16
 #define SAMPLE_TO_READ          1024
-
-#define DECODER_LIBRARY         "libm10.so"
 
 /*
  * Global vars
@@ -325,13 +324,8 @@ unsigned int    getSecondsFromParamString(const char *szString)
 
 int main(int ac, char *av[])
 {
-    void            *handle = NULL;
-    trappette_lib_t *(*get_lib_info)(void) = NULL;
-    trappette_lib_t *pLibInfo = NULL;
-    void        *pDecoder = NULL;
+    decoder_t   decoder;
     config_t    config;
-    int16_t     samples[SAMPLE_TO_READ];
-    int         samplesRead = 0;
     int         opt;
     int         nWatchdogAbortSecond = 0;
     int         nWatchdogTimeoutSecond = 0;
@@ -464,112 +458,86 @@ int main(int ac, char *av[])
     Watchdog_set(&config.watchdog, nWatchdogAbortSecond, nWatchdogTimeoutSecond);
 
     /*
-     * Load decoder
+     * Init decoder(s)
      */
 
-    // Load library
-    handle = dlopen("./" DECODER_LIBRARY, RTLD_LAZY);
-    if (!handle) {
-        fprintf(stderr, "Error: Can't open %s\n", DECODER_LIBRARY);
-        goto clean;
-    }
-
-    // Search library info
-    get_lib_info = dlsym(handle, "get_lib_info");
-    if (!get_lib_info) {
-        fprintf(stderr, "Error:%s: get_lib_info() not found\n", DECODER_LIBRARY);
-        goto close;
-    }
-    pLibInfo = get_lib_info();
-    if (!pLibInfo) {
-        fprintf(stderr, "Error: %s: get_lib_info() returns NULL\n", DECODER_LIBRARY);
-        goto close;
-    }
-    fprintf(stderr, "[%s] Loaded: %s\n", pLibInfo->szLibName,
-                                         pLibInfo->szLibInfo);
-
-    // Check library min requirement 
-    if (!pLibInfo->process16bit48k) {
-        fprintf(stderr, "Error: %s trappette_lib_t doesn't have process16bit48k()\n", DECODER_LIBRARY);
-        goto close;
-    }
-
-    /*
-     * Init decoder
-     */
-
-    pDecoder = NULL;
-    if (pLibInfo->init)
-        pDecoder = pLibInfo->init();
-    if (pLibInfo->setVerboseLevel)
-        pLibInfo->setVerboseLevel(pDecoder, verboseLevel);
-    if (pLibInfo->setDecodedCallback)
-        pLibInfo->setDecodedCallback(pDecoder, decoded_cb, (void*)&config);
-    if ((bHexDump == true) && (pLibInfo->setStreamCallback))
-        pLibInfo->setStreamCallback(pDecoder, stream_dump_cb, NULL);
-    if ((filterMode != -1) && (pLibInfo->enableFilter))
-        pLibInfo->enableFilter(pDecoder, (bool) filterMode);
-
-    /*
-     * Almost infinite loop
-     */
-
-    fprintf(stderr, "# Read %dHz/%dbits on stdin\n", EXPECTED_BIT_RATE_HZ, EXPECTED_BIT_PER_SAMPLE);
-
-    printHeader();
-
-    while (gl_stop == 0) {
-
-        fd_set         set;
-        struct timeval timeout;
-        int            rv;
-
-        FD_ZERO(&set);
-        FD_SET(0, &set);
-        timeout.tv_sec = 1;
-        timeout.tv_usec = 0;
+    if (decoder_init(&decoder, ".") > 0) {
 
         /*
-         * Read samples from stdin
-         */
+        * Configure decoder(s)
+        */
 
-        rv = select(1, &set, NULL, NULL, &timeout);
-        if (rv == -1) {
+        decoder_setVerboseLevel(&decoder, verboseLevel);
+        decoder_setDecodedCallback(&decoder, decoded_cb, (void*)&config);
+        if (bHexDump == true)
+            decoder_setStreamCallback(&decoder, stream_dump_cb, NULL);
+        decoder_enableFilter(&decoder, (bool) filterMode);
 
-          perror("select()");
-          break;
-        }
-        else if (rv == 0) {
+        /*
+        * Almost infinite loop
+        */
 
-          fprintf(stdout, "read() timeout\n");
-          break;
-        }
+        fprintf(stderr, "# Read %dHz/%dbits on stdin\n", EXPECTED_BIT_RATE_HZ, EXPECTED_BIT_PER_SAMPLE);
 
-        samplesRead = read(0, &samples, SAMPLE_TO_READ*sizeof(int16_t)) / 2;
-        if (samplesRead <= 0) {
+        printHeader();
 
-            fprintf(stderr, "nothing more to read (%d)\n", samplesRead);
-            break;
+        while (gl_stop == 0) {
+
+            int16_t         samples[SAMPLE_TO_READ];
+            int             samplesRead = 0;
+            fd_set          set;
+            struct timeval  timeout;
+            int             rv;
+
+            FD_ZERO(&set);
+            FD_SET(0, &set);
+            timeout.tv_sec = 1;
+            timeout.tv_usec = 0;
+
+            /*
+             * Read samples from stdin
+             */
+
+            rv = select(1, &set, NULL, NULL, &timeout);
+            if (rv == -1) {
+
+                perror("select()");
+                break;
+            }
+            else if (rv == 0) {
+
+                fprintf(stdout, "read() timeout\n");
+                break;
+            }
+
+            samplesRead = read(0, &samples, SAMPLE_TO_READ*sizeof(int16_t)) / 2;
+            if (samplesRead <= 0) {
+
+                fprintf(stderr, "nothing more to read (%d)\n", samplesRead);
+                break;
+            }
+
+            /*
+             * Process samples
+             */
+
+            decoder_process16bit48k(&decoder, samples, samplesRead);
         }
 
         /*
-         * Process samples
+         * Release decoder(s)
          */
 
-        pLibInfo->process16bit48k(pDecoder, samples, samplesRead);
+        decoder_release(&decoder);
+    }
+    else {
+        fprintf(stderr, "Error: No decoder found\n");
     }
 
     /*
      * Clean...
      */
 
-    if (pLibInfo->release)
-        pLibInfo->release(pDecoder);
-    pDecoder = NULL;
-close:
-    dlclose(handle);
-
-clean:
     Watchdog_delete(&config.watchdog);
     Config_clean(&config);
 
