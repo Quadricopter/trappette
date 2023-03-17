@@ -1,7 +1,6 @@
-SRCS	= main.c kml.c wgs84.c rotor.c config.c reader.c wordtab.c gps.c serial_unix.c watchdog.c
+SRCS	= main.c decoder.c kml.c wgs84.c rotor.c config.c reader.c wordtab.c gps.c serial_unix.c watchdog.c
 OBJS	= $(SRCS:.c=.o)
 INC		= -I../sdk
-INC	   += -I../m10  # TODO: Move tsip struct in sdk/
 CFLAGS	= -Wall $(INC)
 NAME	= trappette
 CC		= gcc
