@@ -33,7 +33,7 @@ int Watchdog_init(watchdog_t *wd, void (*signal_cb)(int i))
 
     if (signal(SIGALRM, signal_cb) == SIG_ERR) {
 
-        fprintf(stderr, "signal failed...\n");
+        fprintf(stderr, "[WATCHDOG] signal failed...\n");
         exit(EXIT_FAILURE);
     }
 
@@ -43,7 +43,7 @@ int Watchdog_init(watchdog_t *wd, void (*signal_cb)(int i))
 
     if (timer_create(CLOCK_REALTIME, NULL, &wd->timerid) == -1) {
 
-        fprintf(stderr, "timer_create failed\n");
+        fprintf(stderr, "[WATCHDOG] timer_create failed\n");
         exit(EXIT_FAILURE);
     }
 
@@ -57,7 +57,7 @@ int Watchdog_set(watchdog_t *wd, unsigned int abortSec, unsigned int timeoutSec)
     struct itimerspec   timer_value;
     char    buff[32];
 
-    if (!wd || abortSec < 0 || timeoutSec < 0)
+    if (!wd)
         return -1;
 
     wd->nAbortSecond = abortSec;
@@ -73,17 +73,17 @@ int Watchdog_set(watchdog_t *wd, unsigned int abortSec, unsigned int timeoutSec)
         timer_value.it_value.tv_sec = wd->nAbortSecond;
         if (timer_settime(wd->timerid, 0, (const struct itimerspec*) &timer_value, NULL) != 0) {
 
-            fprintf(stderr, "timer_settime failed\n");
+            fprintf(stderr, "[WATCHDOG] timer_settime failed\n");
             exit(EXIT_FAILURE);
         }
 
         sprintf_secondsToHMS(buff, wd->nAbortSecond);
-        fprintf(stderr, "# Abort in %s, if nothing is received\n", buff);
+        fprintf(stderr, "[WATCHDOG] Abort in %s, if nothing is received\n", buff);
     }
     if (wd->nTimeoutSecond > 0) {
 
         sprintf_secondsToHMS(buff, wd->nTimeoutSecond);
-        fprintf(stderr, "# Time out set: %s after last received position\n", buff);
+        fprintf(stderr, "[WATCHDOG] Time out set: %s after last received position\n", buff);
     }
 
     return 0;
@@ -118,7 +118,7 @@ int Watchdog_kick(watchdog_t *wd)
         timer_value.it_value.tv_sec = wd->nTimeoutSecond;
         if (timer_settime(wd->timerid, 0, (const struct itimerspec*) &timer_value, NULL) != 0) {
 
-            fprintf(stderr, "timer_settime failed\n");
+            fprintf(stderr, "[WATCHDOG] timer_settime failed\n");
             exit(EXIT_FAILURE);
         }
 

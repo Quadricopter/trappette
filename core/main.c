@@ -12,7 +12,6 @@
 #include <math.h>
 #include <ctype.h>
 #include <sys/select.h>
-#include <dlfcn.h>
 
 #include "watchdog.h"
 #include "kml.h"
@@ -231,12 +230,12 @@ int decoded_cb(const decoded_position_t *tsip, void *data)
 
         if (pConfig->enableGpsOut) {
 
-            if (serial_write(&pConfig->serialGpsOut, gga, strlen(gga)) != strlen(gga)) {
+            if (serial_write(&pConfig->serialGpsOut, gga, strlen(gga)) != (int) strlen(gga)) {
 
                 fprintf(stderr, "serial_write(gga) failed\n");
                 exit(EXIT_FAILURE);
             }
-            if (serial_write(&pConfig->serialGpsOut, rmc, strlen(rmc)) != strlen(rmc)) {
+            if (serial_write(&pConfig->serialGpsOut, rmc, strlen(rmc)) != (int) strlen(rmc)) {
 
                 fprintf(stderr, "serial_write(rmc) failed\n");
                 exit(EXIT_FAILURE);
@@ -260,6 +259,8 @@ int decoded_cb(const decoded_position_t *tsip, void *data)
 int stream_dump_cb(const uint8_t *stream, uint16_t size, void *data)
 {
     uint16_t    n;
+
+    (void) data;
 
     /*
      * Hexadecimal dump
@@ -289,7 +290,7 @@ unsigned int    getSecondsFromParamString(const char *szString)
     int n, mul;
 
     strncpy(str, szString, 32);
-    for (seconds = 0, n = 0, mul = 1; n < strlen(str); n++) {
+    for (seconds = 0, n = 0, mul = 1; n < (int) strlen(str); n++) {
 
 /*        if (str[n] == ' ') {
 

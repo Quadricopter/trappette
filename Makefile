@@ -1,8 +1,4 @@
 NAME	= trappette
-CC		= gcc
-LDFLAGS	= -lm -lrt -pthread -ldl
-
-##########
 
 all: libm10 libcore
 
@@ -18,5 +14,3 @@ clean:
 	(cd m10; make clean);
 	(cd core; make clean);
 	rm -rf $(NAME) *.so *~ \#*
-
-re:	clean all
