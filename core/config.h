@@ -7,7 +7,7 @@
 #include "watchdog.h"
 #include "rotor.h"
 
-#define DEFAULT_CONFIG_FILE     "trappette.cfg"
+#define DEFAULT_CONFIG_FILE     ".trappette.cfg"
 
 /*
  * Return values
