@@ -8,7 +8,7 @@
 #define DEFAULT_BIT_SKIP    3
 
 #define PREAMBLE_MIN_BYTES_LENGTH   3
-const char szPreambleStream[PREAMBLE_MIN_BYTES_LENGTH]= { 0xAA, 0xAA, 0xAA };
+const unsigned char szPreambleStream[PREAMBLE_MIN_BYTES_LENGTH]= { 0xAA, 0xAA, 0xAA };
 
 /*
  * --------------------------------------------------------------------------

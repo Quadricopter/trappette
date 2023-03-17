@@ -37,7 +37,7 @@ int trim_config_line(char *szLine)
             szLine[n] = 0;
 
     // Remove space and tab
-    for (n = 0; n < strlen(szLine); n++)
+    for (n = 0; n < (int) strlen(szLine); n++)
         if (szLine[n])
             while ((szLine[n] == ' ') || (szLine[n] == '\t')) {
 
@@ -53,7 +53,7 @@ int lowercase_config_line(char *szLine)
     int n;
 
     // Lower-case everything
-    for (n = 0; n < strlen(szLine); n++) {
+    for (n = 0; n < (int) strlen(szLine); n++) {
         if (isupper(szLine[n]))
             szLine[n] = tolower(szLine[n]);
     }

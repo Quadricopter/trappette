@@ -66,7 +66,7 @@ int decoder_init(decoder_t *ctx, const char *szPath)
                 // Load library
                 handle = dlopen(pszLongFilename, RTLD_LAZY);
                 if (!handle) {
-                    fprintf(stderr, "Error: Can't open %s\n", pszLongFilename);
+                    fprintf(stderr, "[DECODER] Error: Can't open %s\n", pszLongFilename);
                 }
                 else {
 
@@ -74,24 +74,24 @@ int decoder_init(decoder_t *ctx, const char *szPath)
                     trappette_lib_t *pLibInfo = NULL;
 
                     // Search library info
-                    get_lib_info = dlsym(handle, "get_lib_info");
+                    *(void**) (&get_lib_info) = dlsym(handle, "get_lib_info");
                     if (!get_lib_info) {
-                        fprintf(stderr, "Error: %s: get_lib_info() not found\n", pszLongFilename);
+                        fprintf(stderr, "[DECODER] Error: %s: get_lib_info() not found\n", pszLongFilename);
                         dlclose(handle);
                     }
                     else {
                         pLibInfo = get_lib_info();
                         if (!pLibInfo) {
-                            fprintf(stderr, "Error: %s: get_lib_info() returns NULL\n", pszLongFilename);
+                            fprintf(stderr, "[DECODER] Error: %s: get_lib_info() returns NULL\n", pszLongFilename);
                             dlclose(handle);
                         }
                         else {
-                            fprintf(stderr, "[%s] Loaded: %s\n", pLibInfo->szLibName,
-                                                                pLibInfo->szLibInfo);
+                            fprintf(stderr, "[DECODER] %s Loaded: %s\n", pLibInfo->szLibName,
+                                                                         pLibInfo->szLibInfo);
 
                             // Check library min requirement 
                             if (!pLibInfo->process16bit48k) {
-                                fprintf(stderr, "Error: %s trappette_lib_t doesn't have process16bit48k()\n", pszLongFilename);
+                                fprintf(stderr, "[DECODER] Error: %s trappette_lib_t doesn't have process16bit48k()\n", pszLongFilename);
                                 dlclose(handle);
                             }
                             else {

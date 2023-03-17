@@ -1,7 +1,7 @@
 SRCS	= main.c decoder.c kml.c wgs84.c rotor.c config.c reader.c wordtab.c gps.c serial_unix.c watchdog.c
 OBJS	= $(SRCS:.c=.o)
 INC		= -I../sdk
-CFLAGS	= -Wall $(INC)
+CFLAGS	= -Wall -Wpedantic -Wextra $(INC)
 NAME	= trappette
 CC		= gcc
 
@@ -18,5 +18,3 @@ all: $(OBJS)
 
 clean:
 	rm -rf $(NAME) *.o *~ \#*
-
-re:	clean all

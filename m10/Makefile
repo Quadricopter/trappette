@@ -1,7 +1,7 @@
 SRCS	= libm10.c filter.c m10.c manchester.c tsip.c checksum.c endian_util.c
 OBJS	= $(SRCS:.c=.o)
-INC     = -I. -I../sdk
-CFLAGS	= -Wall $(INC)
+INC     = -I../sdk
+CFLAGS  = -Wall -Wpedantic -Wextra $(INC)
 NAME	= libm10
 CC		= gcc
 
@@ -19,5 +19,3 @@ all:	$(OBJS)
 clean:
 	rm -rf *.o *~ \#*
 	rm -f $(NAME).so
-
-re:	clean all
