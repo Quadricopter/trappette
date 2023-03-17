@@ -341,12 +341,9 @@ int main(int ac, char *av[])
      */
 
     Config_init(&config);
-    if (Config_loadFromFile(&config, "." DEFAULT_CONFIG_FILE) != CONFIG_SUCCESS) {
+    if (Config_loadFromFile(&config, DEFAULT_CONFIG_FILE) != CONFIG_SUCCESS) {
 
-        if (Config_loadFromFile(&config, DEFAULT_CONFIG_FILE) != CONFIG_SUCCESS) {
-
-            fprintf(stderr, "[CONFIG] Config file not found [%s]\n", DEFAULT_CONFIG_FILE);
-        }
+        fprintf(stderr, "[CONFIG] Config file not found [%s]\n", DEFAULT_CONFIG_FILE);
     }
 
     /*
