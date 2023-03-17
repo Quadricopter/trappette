@@ -120,17 +120,9 @@ int process_config_line(config_t *pConfig, const char *szLine)
      * Offsets
      */
 
-    if (!strncmp(wt[0], "time.offset", 11)) {
+    if (!strncmp(wt[0], "time.utc", 8)) {
 
-/***** TODO ******
-        tzset();
-        fprintf(stdout, "tzname:   [%s] [%s]\n", tzname[0], tzname[1]);
-        fprintf(stdout, "timezone: %ld\n", timezone);
-        fprintf(stdout, "daylight: %d\n", daylight);
-****************/
-
-        pConfig->timeOffset = atoi(wt[1]);
-//        fprintf(stderr, "time.offset: %d\n", pConfig->timeOffset);
+        pConfig->bShowUTC = atoi(wt[1]) != 0 ? true : false;
     }
 
     if (!strncmp(wt[0], "earth.ellipsoid", 9)) {

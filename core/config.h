@@ -2,6 +2,7 @@
 #define __CONFIG_H__
 
 #include <stdio.h>
+#include <stdbool.h>
 #include "serial.h"
 #include "watchdog.h"
 #include "rotor.h"
@@ -25,7 +26,7 @@ enum {
 typedef struct {
 
     /* Dump Offsets/Settings */
-    int     timeOffset;
+    bool    bShowUTC;
     double  dEllipsoid;
     int     headerRepeat;
 
